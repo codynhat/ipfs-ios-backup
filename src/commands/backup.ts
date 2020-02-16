@@ -65,13 +65,14 @@ export default class Backup extends Command {
 
   async run() {
     const {args, flags} = this.parse(Backup)
-
+    this.log(args.provider)
     switch (args.provider) {
       case "ipfs": {
         if(flags.ipfsAddr == null) {
           this.error("Missing required flag (ipfsAddr)")
           return
         }
+        break
       }
       case "pinata": {
         if(flags.pinataApiKey == null) {
@@ -82,6 +83,7 @@ export default class Backup extends Command {
           this.error("Missing required flag (pinataSecretApiKey)")
           return
         }
+        break
       }
       case "threads": {
         if(flags.threadsAddr == null) {
@@ -92,6 +94,7 @@ export default class Backup extends Command {
           this.error("Missing required flag (threadsStoreId)")
           return
         }
+        break
       }
       case "temporal": {
         if(flags.temporalUsername == null) {
@@ -102,6 +105,7 @@ export default class Backup extends Command {
           this.error("Missing required flag (temporalPassword)")
           return
         }
+        break
       }
     }
 
@@ -136,6 +140,7 @@ export default class Backup extends Command {
         this.log("Pinning backup to IPFS...")
         let cid = await this.pinToIPFS(flags.ipfsAddr, `./${args.device_uuid}.tgz`)
         this.log(`Successfully pinned backup to IPFS (${cid})`)
+        break
       }
       case "pinata": {
         this.log("Pinning backup to IPFS...")
@@ -144,6 +149,7 @@ export default class Backup extends Command {
         this.log("Sending CID to Pinata pin queue...")
         await this.sendHashToPinata(flags.pinataApiKey, flags.pinataSecretApiKey, cid)
         this.log("Successfully sent CID to Pinata queue.")
+        break
       }
       case "threads": {
         this.log("Pinning backup to IPFS...")
@@ -152,6 +158,7 @@ export default class Backup extends Command {
         this.log(`Adding backup to threads store ID ${flags.threadsStoreId}`)
         await this.addBackupToThread(flags.threadsAddr || "", flags.threadsStoreId || "", cid || "", args.device_uuid)
         this.log("Added backup to thread.")
+        break
       }
       case "temporal": {
         this.log("Pinning backup to IPFS...")
@@ -159,6 +166,7 @@ export default class Backup extends Command {
         this.log(`Successfully pinned backup to IPFS (${cid})`)
         this.log(`Pinning CID on Temporal...`)
         await this.pinHashToTemporal(flags.temporalUsername || "", flags.temporalPassword || "", cid || "")
+        break
       }
     }
  }
