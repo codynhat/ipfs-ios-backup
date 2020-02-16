@@ -3,13 +3,14 @@ import { exec, spawn, spawnSync } from 'child_process'
 import * as util from 'util'
 const ipfsClient = require('ipfs-http-client')
 const tar = require('tar')
+const pinataSDK = require('@pinata/sdk')
 import * as fs from 'fs'
 
 export default class Backup extends Command {
   static description = 'Backup an iOS device'
 
   static examples = [
-    `$ ipfs-ios-backup backup ipfs b4c1d70d521a5c110b16f9881f1d0 --password=backup-password`,
+    `$ ipfs-ios-backup backup ipfs b4c1d70d521a5c110b16f9881f1d0 --password=backup-password --ipfsAddr=/ip4/127.0.0.1/tcp/5001`,
   ]
 
   static flags = {
@@ -20,6 +21,16 @@ export default class Backup extends Command {
     ipfsAddr: flags.string({
       description: "IPFS host addr"
     }),
+    pinataApiKey: flags.string({
+      description: "Pinata API Key"
+    }),
+    pinataSecretApiKey: flags.string({
+      description: "Pinata Secret API Key"
+    }),
+    uploadOnly: flags.boolean({
+      description: "Only upload existing backup",
+      default: false
+    })
   }
 
   static args = [
@@ -27,7 +38,7 @@ export default class Backup extends Command {
       name: "provider",
       required: true,
       description: "Provider used to store backup",
-      options: ["ipfs"]
+      options: ["ipfs", "pinata"]
     },
     {
       name: "device_uuid",
@@ -45,6 +56,15 @@ export default class Backup extends Command {
           this.error("Missing required flag (ipfsAddr)")
           return
         }
+      case "pinata":
+        if(flags.pinataApiKey == null) {
+          this.error("Missing required flag (pinataApiKey)")
+          return
+        }
+        if(flags.pinataSecretApiKey == null) {
+          this.error("Missing required flag (pinataSecretApiKey)")
+          return
+        }
     }
 
     const execP = util.promisify(exec)
@@ -56,9 +76,11 @@ export default class Backup extends Command {
         this.log("Backup encryption already enabled.")
     }
 
-    this.log(`Starting backup to ./${args.device_uuid}`)
+    if(flags.uploadOnly == false) {
+      this.log(`Starting backup to ./${args.device_uuid}`)
 
-    spawnSync("idevicebackup2", ["-u", args.device_uuid, "backup", "./"], { stdio: 'inherit' })
+      spawnSync("idevicebackup2", ["-u", args.device_uuid, "backup", "./"], { stdio: 'inherit' })
+    }
 
     await this.trimBackupForDemo(`./${args.device_uuid}`)
 
@@ -72,10 +94,19 @@ export default class Backup extends Command {
     this.log("Finished compressing backup.")
 
     switch (args.provider) {
-      case "ipfs":
+      case "ipfs": {
         this.log("Pinning backup to IPFS...")
-        const cid = await this.pinToIPFS(flags.ipfsAddr, `./package.json`)
+        let cid = await this.pinToIPFS(flags.ipfsAddr, `./${args.device_uuid}.tgz`)
         this.log(`Successfully pinned backup to IPFS (${cid})`)
+      }
+      case "pinata": {
+        this.log("Pinning backup to IPFS...")
+        let cid = await this.pinToIPFS(flags.ipfsAddr, `./${args.device_uuid}.tgz`)
+        this.log(`Successfully pinned backup to IPFS (${cid})`)
+        this.log("Sending CID to Pinata pin queue...")
+        await this.sendHashToPinata(flags.pinataApiKey, flags.pinataSecretApiKey, cid)
+        this.log("Successfully sent CID to Pinata queue.")
+      }
     }
  }
 
@@ -85,6 +116,15 @@ export default class Backup extends Command {
   for await (const result of cmd) {
     return result.cid.toString()
   }
+ }
+
+ async sendHashToPinata(pinataApiKey: string | undefined, pinataSecretApiKey: string | undefined, cid: string | undefined) {
+  const pinata = pinataSDK(pinataApiKey, pinataSecretApiKey)
+  await pinata.addHashToPinQueue(cid, {
+    pinataMetadata: {
+      name: "My iOS Backup"
+    }
+  })
  }
 
  async trimBackupForDemo(localPath: string) {
