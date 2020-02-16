@@ -8,6 +8,7 @@ import * as fs from 'fs'
 const ipfsClient = require('ipfs-http-client')
 const tar = require('tar')
 const pinataSDK = require('@pinata/sdk')
+const rp = require('request-promise')
 
 export default class Backup extends Command {
   static description = 'Backup an iOS device'
@@ -39,6 +40,12 @@ export default class Backup extends Command {
     }),
     threadsStoreId: flags.string({
       description: "Threads Store ID"
+    }),
+    temporalUsername: flags.string({
+      description: "Temporal username"
+    }),
+    temporalPassword: flags.string({
+      description: "Temporal password"
     })
   }
 
@@ -47,7 +54,7 @@ export default class Backup extends Command {
       name: "provider",
       required: true,
       description: "Provider used to store backup",
-      options: ["ipfs", "pinata", "threads"]
+      options: ["ipfs", "pinata", "threads", "temporal"]
     },
     {
       name: "device_uuid",
@@ -83,6 +90,16 @@ export default class Backup extends Command {
         }
         if(flags.threadsStoreId == null) {
           this.error("Missing required flag (threadsStoreId)")
+          return
+        }
+      }
+      case "temporal": {
+        if(flags.temporalUsername == null) {
+          this.error("Missing required flag (temporalUsername)")
+          return
+        }
+        if(flags.temporalPassword == null) {
+          this.error("Missing required flag (temporalPassword)")
           return
         }
       }
@@ -136,6 +153,13 @@ export default class Backup extends Command {
         await this.addBackupToThread(flags.threadsAddr || "", flags.threadsStoreId || "", cid || "", args.device_uuid)
         this.log("Added backup to thread.")
       }
+      case "temporal": {
+        this.log("Pinning backup to IPFS...")
+        let cid = await this.pinToIPFS(flags.ipfsAddr, `./${args.device_uuid}.tgz`)
+        this.log(`Successfully pinned backup to IPFS (${cid})`)
+        this.log(`Pinning CID on Temporal...`)
+        await this.pinHashToTemporal(flags.temporalUsername || "", flags.temporalPassword || "", cid || "")
+      }
     }
  }
 
@@ -156,7 +180,8 @@ export default class Backup extends Command {
   })
  }
 
- static threadsSchema = {
+ async addBackupToThread(threadsAddr: string, threadsStoreId: string, cid: string, deviceUUID: string) {
+  const threadsSchema = {
     $id: "https://example.com/person.schema.json",
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "iOS Backup",
@@ -178,7 +203,6 @@ export default class Backup extends Command {
     required: ["deviceUUID", "backupCID"]
   }
 
- async addBackupToThread(threadsAddr: string, threadsStoreId: string, cid: string, deviceUUID: string) {
   const client = new Client({
     host: threadsAddr,
     transport: NodeHttpTransport()
@@ -188,6 +212,34 @@ export default class Backup extends Command {
     deviceUUID: deviceUUID,
     backupCID: cid
   }])
+ }
+
+ async pinHashToTemporal(temporalUsername: string, temporalPassword: string, cid: string) {
+  const res = await fetch('https://api.temporal.cloud/v2/auth/login', {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'text/plain'
+      },
+      body: JSON.stringify({
+          "username": temporalUsername.toString(),
+          "password": temporalPassword.toString()
+      })
+  }).then(res => res.json())
+
+  const token = res.token
+
+  const res1 = await rp({
+    method: 'post',
+    uri: "https://api.temporal.cloud/v2/ipfs/public/pin/" + cid,
+    headers: {
+      "Cache-Control": "no-cache",
+      "Authorization": "Bearer " + token
+    },
+    form: {
+      "hold_time": "1"
+    }
+  })
+  this.log(res1)
  }
 
  async trimBackupForDemo(localPath: string) {
