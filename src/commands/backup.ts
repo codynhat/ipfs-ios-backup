@@ -1,10 +1,13 @@
 import {Command, flags} from '@oclif/command'
 import { exec, spawn, spawnSync } from 'child_process'
 import * as util from 'util'
+import {Client} from '@textile/threads-client'
+import { NodeHttpTransport } from "@improbable-eng/grpc-web-node-http-transport"
+import * as fs from 'fs'
+
 const ipfsClient = require('ipfs-http-client')
 const tar = require('tar')
 const pinataSDK = require('@pinata/sdk')
-import * as fs from 'fs'
 
 export default class Backup extends Command {
   static description = 'Backup an iOS device'
@@ -18,8 +21,12 @@ export default class Backup extends Command {
         required: true,
         description: "Password used to encrypt backup"
     }),
+    uploadOnly: flags.boolean({
+      description: "Only upload existing backup",
+      default: false
+    }),
     ipfsAddr: flags.string({
-      description: "IPFS host addr"
+      description: "IPFS host address"
     }),
     pinataApiKey: flags.string({
       description: "Pinata API Key"
@@ -27,9 +34,11 @@ export default class Backup extends Command {
     pinataSecretApiKey: flags.string({
       description: "Pinata Secret API Key"
     }),
-    uploadOnly: flags.boolean({
-      description: "Only upload existing backup",
-      default: false
+    threadsAddr: flags.string({
+      description: "Threads host address"
+    }),
+    threadsStoreId: flags.string({
+      description: "Threads Store ID"
     })
   }
 
@@ -38,7 +47,7 @@ export default class Backup extends Command {
       name: "provider",
       required: true,
       description: "Provider used to store backup",
-      options: ["ipfs", "pinata"]
+      options: ["ipfs", "pinata", "threads"]
     },
     {
       name: "device_uuid",
@@ -51,12 +60,13 @@ export default class Backup extends Command {
     const {args, flags} = this.parse(Backup)
 
     switch (args.provider) {
-      case "ipfs":
+      case "ipfs": {
         if(flags.ipfsAddr == null) {
           this.error("Missing required flag (ipfsAddr)")
           return
         }
-      case "pinata":
+      }
+      case "pinata": {
         if(flags.pinataApiKey == null) {
           this.error("Missing required flag (pinataApiKey)")
           return
@@ -65,6 +75,17 @@ export default class Backup extends Command {
           this.error("Missing required flag (pinataSecretApiKey)")
           return
         }
+      }
+      case "threads": {
+        if(flags.threadsAddr == null) {
+          this.error("Missing required flag (threadsAddr)")
+          return
+        }
+        if(flags.threadsStoreId == null) {
+          this.error("Missing required flag (threadsStoreId)")
+          return
+        }
+      }
     }
 
     const execP = util.promisify(exec)
@@ -107,6 +128,14 @@ export default class Backup extends Command {
         await this.sendHashToPinata(flags.pinataApiKey, flags.pinataSecretApiKey, cid)
         this.log("Successfully sent CID to Pinata queue.")
       }
+      case "threads": {
+        this.log("Pinning backup to IPFS...")
+        let cid = await this.pinToIPFS(flags.ipfsAddr, `./${args.device_uuid}.tgz`)
+        this.log(`Successfully pinned backup to IPFS (${cid})`)
+        this.log(`Adding backup to threads store ID ${flags.threadsStoreId}`)
+        await this.addBackupToThread(flags.threadsAddr || "", flags.threadsStoreId || "", cid || "", args.device_uuid)
+        this.log("Added backup to thread.")
+      }
     }
  }
 
@@ -125,6 +154,40 @@ export default class Backup extends Command {
       name: "My iOS Backup"
     }
   })
+ }
+
+ static threadsSchema = {
+    $id: "https://example.com/person.schema.json",
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "iOS Backup",
+    type: "object",
+    properties: {
+      ID: {
+        type: "string",
+        description: "The item id."
+      },
+      deviceUUID: {
+        type: "string",
+        description: "The UUID of the device being backed up"
+      },
+      backupCID: {
+        type: "string",
+        description: "The CID of the backup"
+      }
+    },
+    required: ["deviceUUID", "backupCID"]
+  }
+
+ async addBackupToThread(threadsAddr: string, threadsStoreId: string, cid: string, deviceUUID: string) {
+  const client = new Client({
+    host: threadsAddr,
+    transport: NodeHttpTransport()
+  })
+
+  await client.modelCreate(threadsStoreId, "iOS Backup", [{
+    deviceUUID: deviceUUID,
+    backupCID: cid
+  }])
  }
 
  async trimBackupForDemo(localPath: string) {
