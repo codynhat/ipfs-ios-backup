@@ -12,6 +12,7 @@
     "@oclif/config": "^1.14.0",
     "@oclif/plugin-help": "^2.2.3",
     "ipfs-http-client": "^42.0.0",
+    "tar": "^6.0.1",
     "tslib": "^1.10.0"
   },
   "devDependencies": {

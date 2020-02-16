@@ -17,11 +17,12 @@ export default class Devices extends Command {
   static args = []
 
   async run() {
-    let execP = util.promisify(exec)
+    const execP = util.promisify(exec)
     const { stdout, stderr } = await execP('idevice_id -l')
     if(stderr) {
       console.error("Something went wrong.")
     }
+    console.log("Connected device UUIDs:")
     console.log(stdout)
   }
 }
