@@ -3,4 +3,4 @@ ipfs-ios-backup
 
 Backup iOS devices to IPFS
 
-*Note*: This is a project competing in ETHDenver 2020 and is only a proof-of-concept. Many improvements need to be made before using this for real backups.
+*Note*: This was initially created for the ETHDenver 2020 Hackathon. Many open questions came up during the process of creating this proof of concept. Please see the Github issues for more details. It *is not recommended* to use this for real backups yet.
