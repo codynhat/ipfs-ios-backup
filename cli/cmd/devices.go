@@ -55,14 +55,19 @@ var devicesListCmd = &cobra.Command{
 			var connTypeStr string
 			switch device.ConnectionType {
 			case idevice.USB:
-				connTypeStr = "(USB)"
+				connTypeStr = "USB"
 			case idevice.WIFI:
-				connTypeStr = "(WiFi)"
+				connTypeStr = "WiFi"
 			default:
-				connTypeStr = "(Unknown)"
+				connTypeStr = "Unknown"
 			}
 
-			fmt.Println(device.Udid, connTypeStr)
+			deviceName, err := idevice.GetDeviceName(device.Udid)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("%s (Name: \"%s\", Connection Type: \"%s\")\n", device.Udid, deviceName, connTypeStr)
 		}
 	},
 }

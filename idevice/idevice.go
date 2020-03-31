@@ -25,11 +25,13 @@ package idevice
 #cgo LDFLAGS: -limobiledevice
 #include <stdlib.h>
 #include <libimobiledevice/libimobiledevice.h>
+#include <libimobiledevice/lockdown.h>
 */
 import "C"
 
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -60,7 +62,7 @@ func GetDevices() ([]Device, error) {
 	err := C.idevice_get_device_list_extended(&cDeviceInfos, &length)
 	defer C.idevice_device_list_extended_free(cDeviceInfos)
 	if err < 0 {
-		return nil, errors.New("Could not retrieve list of devices")
+		return nil, errors.New("Failed to retrieve list of devices")
 	}
 
 	cDevices := (*[1 << 28]C.idevice_info_t)(unsafe.Pointer(cDeviceInfos))[:length:length]
@@ -74,4 +76,40 @@ func GetDevices() ([]Device, error) {
 	}
 
 	return devices, nil
+}
+
+// GetDeviceName finds the name of the device with the given ID
+func GetDeviceName(deviceID DeviceID) (string, error) {
+	var device C.idevice_t
+	var client C.lockdownd_client_t
+
+	var cDeviceID *C.char = C.CString(string(deviceID))
+	defer C.free(unsafe.Pointer(cDeviceID))
+
+	err := C.idevice_new_with_options(&device, cDeviceID, C.IDEVICE_LOOKUP_USBMUX|C.IDEVICE_LOOKUP_NETWORK)
+	defer C.idevice_free(device)
+	if err < 0 {
+		return "", errors.New("Failed to retrieve device name (idevice_new_with_options)")
+	}
+
+	if device == nil {
+		return "", fmt.Errorf("No device with UDID (%s) is connected", deviceID)
+	}
+
+	var cLabel *C.char = C.CString("ipfs-ios-backup")
+	defer C.free(unsafe.Pointer(cLabel))
+	err1 := C.lockdownd_client_new(device, &client, cLabel)
+	defer C.lockdownd_client_free(client)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return "", fmt.Errorf("Failed to connect to device (%s)", deviceID)
+	}
+
+	var cDeviceName *C.char
+	defer C.free(unsafe.Pointer(cDeviceName))
+	err1 = C.lockdownd_get_device_name(client, &cDeviceName)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return "", fmt.Errorf("Failed to get device name (%s)", deviceID)
+	}
+
+	return C.GoString(cDeviceName), nil
 }
