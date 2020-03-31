@@ -36,25 +36,42 @@ import (
 // DeviceID is an identifier for a device
 type DeviceID string
 
-// GetDeviceIDs gets the DeviceID of all connected devices
-func GetDeviceIDs() ([]DeviceID, error) {
-	var cDevices *C.idevice_info_t
+// DeviceConnectionType is a type of connection a device is available on
+type DeviceConnectionType int
+
+const (
+	// USB connection type
+	USB DeviceConnectionType = 1
+	// WIFI connection type
+	WIFI DeviceConnectionType = 2
+)
+
+// Device is a representation of an iOS device
+type Device struct {
+	Udid           DeviceID
+	ConnectionType DeviceConnectionType
+}
+
+// GetDevices gets the DeviceID of all connected devices
+func GetDevices() ([]Device, error) {
+	var cDeviceInfos *C.idevice_info_t
 	var length C.int
 
-	err := C.idevice_get_device_list_extended(&cDevices, &length)
-	defer C.idevice_device_list_extended_free(cDevices)
+	err := C.idevice_get_device_list_extended(&cDeviceInfos, &length)
+	defer C.idevice_device_list_extended_free(cDeviceInfos)
 	if err < 0 {
 		return nil, errors.New("Could not retrieve list of devices")
 	}
 
-	devices := (*[1 << 28]C.idevice_info_t)(unsafe.Pointer(cDevices))[:length:length]
-	deviceIDs := make([]DeviceID, int(length))
+	cDevices := (*[1 << 28]C.idevice_info_t)(unsafe.Pointer(cDeviceInfos))[:length:length]
+	devices := make([]Device, int(length))
 
 	for i := 0; i < int(length); i++ {
-		device := devices[i]
-		var deviceID DeviceID = DeviceID(C.GoString(device.udid))
-		deviceIDs[i] = deviceID
+		cDevice := cDevices[i]
+		var deviceID DeviceID = DeviceID(C.GoString(cDevice.udid))
+		var connectionType DeviceConnectionType = DeviceConnectionType(int(cDevice.conn_type))
+		devices[i] = Device{deviceID, connectionType}
 	}
 
-	return deviceIDs, nil
+	return devices, nil
 }

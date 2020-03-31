@@ -39,7 +39,7 @@ var devicesListCmd = &cobra.Command{
 	Short: "List connected iOS devices",
 	Long:  "List connected iOS devices",
 	Run: func(cmd *cobra.Command, args []string) {
-		devices, err := idevice.GetDeviceIDs()
+		devices, err := idevice.GetDevices()
 
 		if err != nil {
 			panic(err)
@@ -49,9 +49,20 @@ var devicesListCmd = &cobra.Command{
 			fmt.Println("No connected devices found.")
 		}
 
-		// Print out device IDs
+		// Print out devices
 		for i := 0; i < len(devices); i++ {
-			fmt.Println(devices[i])
+			device := devices[i]
+			var connTypeStr string
+			switch device.ConnectionType {
+			case idevice.USB:
+				connTypeStr = "(USB)"
+			case idevice.WIFI:
+				connTypeStr = "(WiFi)"
+			default:
+				connTypeStr = "(Unknown)"
+			}
+
+			fmt.Println(device.Udid, connTypeStr)
 		}
 	},
 }
