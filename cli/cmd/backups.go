@@ -23,20 +23,112 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	ipfslite "github.com/hsanjuan/ipfs-lite"
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/query"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
 
-// backupsCmd represents the backups command
 var backupsCmd = &cobra.Command{
 	Use:   "backups",
 	Short: "Interact with iOS backups",
 	Long:  "Interact with iOS backups",
+}
+
+var backupsListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List existing iOS backups",
+	Long:  "List existing iOS backups",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("backups called")
+		// ctx, cancel := context.WithCancel(context.Background())
+		// defer cancel()
+
+		// Find repo path
+		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
+		if err != nil {
+			fmt.Println("Could not create repo path:", err)
+			os.Exit(1)
+		}
+
+		ipfslitePath := filepath.Join(repoRoot, "ipfslite")
+
+		_, err = queryBackups(ipfslitePath)
+		if err != nil {
+			fmt.Println("Failed to fetch backups:", err)
+			os.Exit(1)
+		}
+	},
+}
+
+var backupsCreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Perform a backup",
+	Long:  "Perform a backup",
+	Run: func(cmd *cobra.Command, args []string) {
+		// ctx, cancel := context.WithCancel(context.Background())
+		// defer cancel()
+
+		// Find repo path
+		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
+		if err != nil {
+			fmt.Println("Could not create repo path:", err)
+			os.Exit(1)
+		}
+
+		ipfslitePath := filepath.Join(repoRoot, "ipfslite")
+
+		err = saveBackupCid(ipfslitePath, "test-backup")
+		if err != nil {
+			fmt.Println("Failed to save backup:", err)
+			os.Exit(1)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(backupsCmd)
+	backupsCmd.AddCommand(backupsListCmd)
+	backupsCmd.AddCommand(backupsCreateCmd)
+}
+
+func queryBackups(ipfslitePath string) ([]string, error) {
+	// Get IPFS lite datastore
+	ds, err := ipfslite.BadgerDatastore(ipfslitePath)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get IPFS lite datastore: %s", err)
+	}
+
+	q, err := ds.Query(query.Query{Prefix: "/backups"})
+	if err != nil {
+		return nil, fmt.Errorf("Query failed: %s", err)
+	}
+
+	all, err := q.Rest()
+	if err != nil {
+		return nil, fmt.Errorf("Query failed: %s", err)
+	}
+
+	for _, e := range all {
+		fmt.Println(e)
+	}
+
+	return nil, nil
+}
+
+func saveBackupCid(ipfslitePath string, cid string) error {
+	// Get IPFS lite datastore
+	ds, err := ipfslite.BadgerDatastore(ipfslitePath)
+	if err != nil {
+		return fmt.Errorf("Failed to get IPFS lite datastore: %s", err)
+	}
+
+	if err = ds.Put(datastore.NewKey("/backups/"+cid), []byte("Qm-test")); err != nil {
+		return fmt.Errorf("Failed to save backup CID: %s", err)
+	}
+
+	return nil
 }

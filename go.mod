@@ -3,6 +3,8 @@ module github.com/codynhat/ipfs-ios-backup
 go 1.14
 
 require (
+	github.com/hsanjuan/ipfs-lite v1.1.3
+	github.com/ipfs/go-datastore v0.4.4
 	github.com/ipfs/go-ipfs v0.4.23
 	github.com/ipfs/go-ipfs-config v0.4.0
 	github.com/mitchellh/go-homedir v1.1.0

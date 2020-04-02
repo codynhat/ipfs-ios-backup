@@ -22,16 +22,10 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	config "github.com/ipfs/go-ipfs-config"
-	"github.com/ipfs/go-ipfs/plugin/loader"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
@@ -60,80 +54,12 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := initIpfsRepo(repoRoot); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
 		fmt.Printf("Repo created at %s\n", repoRoot)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-}
-
-func initIpfsRepo(repoRoot string) error {
-	ipfsRepoRoot := filepath.Join(repoRoot, ".ipfs")
-
-	if err := checkWritable(ipfsRepoRoot); err != nil {
-		return err
-	}
-
-	if fsrepo.IsInitialized(ipfsRepoRoot) {
-		return fmt.Errorf("IPFS Repo already exists at %s", ipfsRepoRoot)
-	}
-
-	// Setup plugins
-	if err := setupPlugins(ipfsRepoRoot); err != nil {
-		return fmt.Errorf("Failed to setup plugins: %s", err)
-	}
-
-	// Create config
-	cfg, err := config.Init(ioutil.Discard, 2048)
-	if err != nil {
-		return fmt.Errorf("Could not create config: %s", err)
-	}
-
-	customizeConfig(cfg)
-
-	// Create the repo with the config
-	err = fsrepo.Init(ipfsRepoRoot, cfg)
-	if err != nil {
-		return fmt.Errorf("Could not initialize repo: %s", err)
-	}
-
-	createSwarmKey(ipfsRepoRoot)
-
-	return nil
-}
-
-func customizeConfig(cfg *config.Config) {
-	// Remove Bootstrap list
-	cfg.Bootstrap = make([]string, 0)
-
-	// Enable Filestore
-	cfg.Experimental.FilestoreEnabled = true
-}
-
-// Taken from go-ipfs example
-func setupPlugins(externalPluginsPath string) error {
-	// Load any external plugins if available on externalPluginsPath
-	plugins, err := loader.NewPluginLoader(filepath.Join(externalPluginsPath, "plugins"))
-	if err != nil {
-		return fmt.Errorf("error loading plugins: %s", err)
-	}
-
-	// Load preloaded and external plugins
-	if err := plugins.Initialize(); err != nil {
-		return fmt.Errorf("error initializing plugins: %s", err)
-	}
-
-	if err := plugins.Inject(); err != nil {
-		return fmt.Errorf("error initializing plugins: %s", err)
-	}
-
-	return nil
 }
 
 // Taken from go-ipfs init
@@ -163,22 +89,4 @@ func checkWritable(dir string) error {
 	}
 
 	return err
-}
-
-// See https://github.com/Kubuxu/go-ipfs-swarm-key-gen
-func createSwarmKey(ipfsRepoRoot string) error {
-	key := make([]byte, 32)
-	_, err := rand.Read(key)
-	if err != nil {
-		return fmt.Errorf("While trying to create swarm key: %s", err)
-	}
-
-	encodedKey := hex.EncodeToString(key)
-	swarmKeyPath := filepath.Join(ipfsRepoRoot, "swarm.key")
-	err = ioutil.WriteFile(swarmKeyPath, []byte(fmt.Sprintf("/key/swarm/psk/1.0.0/\n/base16/\n%s\n", encodedKey)), 0644)
-	if err != nil {
-		return fmt.Errorf("Failed to write swarm key: %s", err)
-	}
-
-	return nil
 }
