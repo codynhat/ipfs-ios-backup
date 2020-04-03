@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/codynhat/ipfs-ios-backup/idevice"
 	files "github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
@@ -45,12 +46,14 @@ var backupsCmd = &cobra.Command{
 	Long:  "Interact with iOS backups",
 }
 
-var backupsPerformCmd = &cobra.Command{
-	Use:   "perform [device-id]",
-	Short: "Perform a backup",
-	Long:  "Perform a backup",
+var backupsEnableCmd = &cobra.Command{
+	Use:   "enable [device-id]",
+	Short: "Enable backups for a device",
+	Long:  "Enable backups for a device",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		deviceID := idevice.DeviceID(args[0])
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -70,15 +73,86 @@ var backupsPerformCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// deviceID := idevice.DeviceID(args[0])
+		// Pair device
+		fmt.Println("Pairing device...")
+		if err := idevice.PairDevice(deviceID); err != nil {
+			fmt.Println("Failed to pair device:", err)
+			os.Exit(1)
+		}
+		fmt.Println("Device is paired.")
+
+		// Enable backup encryption
+		fmt.Println("Determining if backup encryption is enabled...")
+		willEncrypt, err := idevice.GetDeviceWillEncrypt(deviceID)
+		if err != nil {
+			fmt.Println("Failed to determine if backup encryption is enabled:", err)
+			os.Exit(1)
+		}
+
+		if !willEncrypt {
+			fmt.Println("Backup encryption is not enabled. Enabling...")
+			if err := idevice.EnableBackupEncryption(deviceID); err != nil {
+				fmt.Println("Failed to enable backup encryption:", err)
+				os.Exit(1)
+			}
+		}
+		fmt.Println("Backup encryption is enabled.")
+
+		// Create IPNS key
+		key, err := getIpnsKeyForDevice(ctx, ipfs, deviceID)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		if key == nil {
+			fmt.Println("Generating IPNS key...")
+			key, err = createBackupIpnsKey(ctx, ipfs, deviceID)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			fmt.Printf("Generated IPNS key (%s -> %s)\n", key.Name(), key.Path())
+		} else {
+			fmt.Printf("IPNS key exists (%s -> %s)\n", key.Name(), key.Path())
+		}
+	},
+}
+
+var backupsPerformCmd = &cobra.Command{
+	Use:   "perform [device-id]",
+	Short: "Perform a backup",
+	Long:  "Perform a backup",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		deviceID := idevice.DeviceID(args[0])
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Find repo path
+		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
+		if err != nil {
+			fmt.Println("Failed to find repo path:", err)
+			os.Exit(1)
+		}
+
+		ipfsRepoRoot := filepath.Join(repoRoot, ".ipfs")
+
+		// Spawn IPFS node
+		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
+		if err != nil {
+			fmt.Println("Failed to spawn IPFS node:", err)
+			os.Exit(1)
+		}
 
 		backupDir := filepath.Join(repoRoot, "backups")
 
 		// Perform backup
-		// if err = idevice.PerformBackup(deviceID, backupDir); err != nil {
-		// 	fmt.Println("Failed to perform backup:", err)
-		// 	os.Exit(1)
-		// }
+		if err = idevice.PerformBackup(deviceID, backupDir); err != nil {
+			fmt.Println("Failed to perform backup:", err)
+			os.Exit(1)
+		}
 
 		// Add backup to IPFS
 		fmt.Println("Adding backup to IPFS...")
@@ -101,6 +175,7 @@ var backupsPerformCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(backupsCmd)
+	backupsCmd.AddCommand(backupsEnableCmd)
 	backupsCmd.AddCommand(backupsPerformCmd)
 }
 
@@ -119,6 +194,36 @@ func addBackupToIpfs(ctx context.Context, ipfs icore.CoreAPI, backupDir string) 
 	}
 
 	return cidDirectory, nil
+}
+
+func getIpnsKeyForDevice(ctx context.Context, ipfs icore.CoreAPI, deviceID idevice.DeviceID) (icore.Key, error) {
+	keys, err := ipfs.Key().List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get IPNS keys: %s", err)
+	}
+
+	deviceIDRaw := string(deviceID)
+	for _, v := range keys {
+		if v.Name() == deviceIDRaw {
+			return v, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func createBackupIpnsKey(ctx context.Context, ipfs icore.CoreAPI, deviceID idevice.DeviceID) (icore.Key, error) {
+	opts := []options.KeyGenerateOption{
+		options.Key.Size(2048),
+		options.Key.Type(options.RSAKey),
+	}
+
+	key, err := ipfs.Key().Generate(ctx, string(deviceID), opts...)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to generate IPNS key: %s", err)
+	}
+
+	return key, nil
 }
 
 func updateLatestBackupIpns(ctx context.Context, ipfs icore.CoreAPI, backupIpfsPath path.Path) (icore.IpnsEntry, error) {

@@ -22,11 +22,12 @@ THE SOFTWARE.
 package idevice
 
 /*
-#cgo LDFLAGS: -limobiledevice
+#cgo LDFLAGS: -limobiledevice -lplist
 #include <stdlib.h>
 #include <libimobiledevice/libimobiledevice.h>
 #include <libimobiledevice/lockdown.h>
 #include <libimobiledevice/devicebackup2.h>
+#include <plist/plist.h>
 */
 import "C"
 
@@ -115,6 +116,103 @@ func GetDeviceName(deviceID DeviceID) (string, error) {
 	return C.GoString(cDeviceName), nil
 }
 
+// GetDeviceWillEncrypt queries a device to see if encryption is enabled. See ideviceinfo cmd
+func GetDeviceWillEncrypt(deviceID DeviceID) (bool, error) {
+	var device C.idevice_t
+	var client C.lockdownd_client_t
+	var node C.plist_t
+
+	var cDeviceID *C.char = C.CString(string(deviceID))
+	defer C.free(unsafe.Pointer(cDeviceID))
+
+	err := C.idevice_new_with_options(&device, cDeviceID, C.IDEVICE_LOOKUP_USBMUX|C.IDEVICE_LOOKUP_NETWORK)
+	defer C.idevice_free(device)
+	if err < 0 {
+		return false, errors.New("Failed to retrieve device name (idevice_new_with_options)")
+	}
+
+	if device == nil {
+		return false, fmt.Errorf("No device with UDID (%s) is connected", deviceID)
+	}
+
+	var cLabel *C.char = C.CString("ipfs-ios-backup")
+	defer C.free(unsafe.Pointer(cLabel))
+	err1 := C.lockdownd_client_new_with_handshake(device, &client, cLabel)
+	defer C.lockdownd_client_free(client)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return false, fmt.Errorf("Failed to connect to device (%s)", deviceID)
+	}
+
+	var cDomain *C.char = C.CString("com.apple.mobile.backup")
+	defer C.free(unsafe.Pointer(cDomain))
+
+	var cValue *C.char = C.CString("WillEncrypt")
+	defer C.free(unsafe.Pointer(cValue))
+
+	err1 = C.lockdownd_get_value(client, cDomain, cValue, &node)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return false, fmt.Errorf("Failed to get lockdownd value (%s)", deviceID)
+	}
+
+	var b C.uint8_t
+	C.plist_get_bool_val(node, &b)
+
+	if uint8(b) > 0 {
+		return true, nil
+	} else {
+		return false, nil
+	}
+
+}
+
+// PairDevice will attempt to pair a device with this computer, or do nothing if already paired
+func PairDevice(deviceID DeviceID) error {
+	var device C.idevice_t
+	var client C.lockdownd_client_t
+
+	var cDeviceID *C.char = C.CString(string(deviceID))
+	defer C.free(unsafe.Pointer(cDeviceID))
+
+	err := C.idevice_new_with_options(&device, cDeviceID, C.IDEVICE_LOOKUP_USBMUX|C.IDEVICE_LOOKUP_NETWORK)
+	defer C.idevice_free(device)
+	if err < 0 {
+		return errors.New("Failed to retrieve device name (idevice_new_with_options)")
+	}
+
+	if device == nil {
+		return fmt.Errorf("No device with UDID (%s) is connected", deviceID)
+	}
+
+	var cLabel *C.char = C.CString("ipfs-ios-backup")
+	defer C.free(unsafe.Pointer(cLabel))
+
+	err1 := C.lockdownd_client_new_with_handshake(device, &client, cLabel)
+	defer C.lockdownd_client_free(client)
+	if err1 == C.LOCKDOWN_E_SUCCESS {
+		// Device is already paired
+		return nil
+	}
+
+	err1 = C.lockdownd_client_new(device, &client, cLabel)
+	defer C.lockdownd_client_free(client)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return fmt.Errorf("Failed to connect to device (%s)", deviceID)
+	}
+
+	err1 = C.lockdownd_pair(client, nil)
+	switch err1 {
+	case C.LOCKDOWN_E_SUCCESS:
+		break
+	case C.LOCKDOWN_E_PASSWORD_PROTECTED:
+		return fmt.Errorf("Passcode detected. Try unlocking your device and trying again")
+		break
+	default:
+		return fmt.Errorf("Failed to get lockdownd value (%s)", deviceID)
+	}
+
+	return nil
+}
+
 // PerformBackup performs a backup using devicebackup2
 func PerformBackup(deviceID DeviceID, backupDirectory string) error {
 	cUdid := C.CString(string(deviceID))
@@ -124,6 +222,20 @@ func PerformBackup(deviceID DeviceID, backupDirectory string) error {
 	defer C.free(unsafe.Pointer(cBackupDir))
 
 	cErr := C.run_cmd(C.CMD_BACKUP, 0, cUdid, cUdid, cBackupDir, 1, nil, nil)
+
+	if cErr < 0 {
+		return fmt.Errorf("devicebackup2 failed with error code %d", cErr)
+	}
+
+	return nil
+}
+
+// EnableBackupEncryption enables backup encryption interactively using devicebackup2
+func EnableBackupEncryption(deviceID DeviceID) error {
+	cUdid := C.CString(string(deviceID))
+	defer C.free(unsafe.Pointer(cUdid))
+
+	cErr := C.run_cmd(C.CMD_CHANGEPW, C.CMD_FLAG_ENCRYPTION_ENABLE, cUdid, cUdid, nil, 1, nil, nil)
 
 	if cErr < 0 {
 		return fmt.Errorf("devicebackup2 failed with error code %d", cErr)
