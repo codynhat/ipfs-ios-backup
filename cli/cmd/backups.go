@@ -185,10 +185,66 @@ var backupsPerformCmd = &cobra.Command{
 	},
 }
 
+var backupsListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List backups that exist",
+	Long:  "List backups that exist",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Find repo path
+		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
+		if err != nil {
+			fmt.Println("Failed to find repo path:", err)
+			os.Exit(1)
+		}
+
+		ipfsRepoRoot := filepath.Join(repoRoot, ".ipfs")
+
+		// Spawn IPFS node
+		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
+		if err != nil {
+			fmt.Println("Failed to spawn IPFS node:", err)
+			os.Exit(1)
+		}
+
+		// Get all IPNS keys
+		keys, err := ipfs.Key().List(ctx)
+		if err != nil {
+			fmt.Printf("Failed to get IPNS keys: %s\n", err)
+			os.Exit(1)
+		}
+
+		if len(keys) == 0 {
+			fmt.Println("No backups found.")
+			return
+		}
+
+		fmt.Println("Backups found:")
+		fmt.Println("[device-id]:\n\t [IPNS path] -> [IPFS path]\n")
+		for _, v := range keys {
+			if v.Name() != "self" {
+				path, err := ipfs.Name().Resolve(ctx, v.Path().String())
+				ipfsPath := "no backup found"
+				if err != nil {
+					ipfsPath = fmt.Sprintf("ERROR: %s", err)
+				}
+				if path != nil && path.String() != "" {
+					ipfsPath = path.String()
+				}
+
+				fmt.Printf("%s:\n\t %s -> %s\n", v.Name(), v.Path(), ipfsPath)
+			}
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(backupsCmd)
 	backupsCmd.AddCommand(backupsEnableCmd)
 	backupsCmd.AddCommand(backupsPerformCmd)
+	backupsCmd.AddCommand(backupsListCmd)
 }
 
 func addBackupToIpfs(ctx context.Context, ipfs icore.CoreAPI, backupDir string) (path.Path, error) {
