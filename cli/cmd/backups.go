@@ -34,6 +34,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	icore "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/options"
+	"github.com/ipfs/interface-go-ipfs-core/path"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
@@ -80,10 +81,21 @@ var backupsPerformCmd = &cobra.Command{
 		// }
 
 		// Add backup to IPFS
-		if err = addBackupToIpfs(ctx, ipfs, backupDir); err != nil {
+		fmt.Println("Adding backup to IPFS...")
+		backupIpfsPath, err := addBackupToIpfs(ctx, ipfs, backupDir)
+		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		fmt.Printf("Added backup to IPFS (%s)\n", backupIpfsPath)
+
+		fmt.Println("Publishing latest backup path to IPNS...")
+		backupIpnsEntry, err := updateLatestBackupIpns(ctx, ipfs, backupIpfsPath)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Printf("Latest backup path published to IPNS with name %s\n", backupIpnsEntry.Name())
 	},
 }
 
@@ -92,12 +104,10 @@ func init() {
 	backupsCmd.AddCommand(backupsPerformCmd)
 }
 
-func addBackupToIpfs(ctx context.Context, ipfs icore.CoreAPI, backupDir string) error {
-	fmt.Println("Adding backup to IPFS...")
-
+func addBackupToIpfs(ctx context.Context, ipfs icore.CoreAPI, backupDir string) (path.Path, error) {
 	backupDirNode, err := getUnixfsNode(backupDir)
 	if err != nil {
-		return fmt.Errorf("Failed to find backup: %s", err)
+		return nil, fmt.Errorf("Failed to find backup: %s", err)
 	}
 
 	opts := []options.UnixfsAddOption{
@@ -105,11 +115,23 @@ func addBackupToIpfs(ctx context.Context, ipfs icore.CoreAPI, backupDir string) 
 	}
 	cidDirectory, err := ipfs.Unixfs().Add(ctx, backupDirNode, opts...)
 	if err != nil {
-		return fmt.Errorf("Failed to add backup to IPFS: %s", err)
+		return nil, fmt.Errorf("Failed to add backup to IPFS: %s", err)
 	}
 
-	fmt.Printf("Added backup to IPFS with CID (%s)\n", cidDirectory.Cid())
-	return nil
+	return cidDirectory, nil
+}
+
+func updateLatestBackupIpns(ctx context.Context, ipfs icore.CoreAPI, backupIpfsPath path.Path) (icore.IpnsEntry, error) {
+	opts := []options.NamePublishOption{
+		options.Name.AllowOffline(true),
+	}
+
+	ipnsEntry, err := ipfs.Name().Publish(ctx, backupIpfsPath, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to publish to IPNS: %s", err)
+	}
+
+	return ipnsEntry, nil
 }
 
 // See https://github.com/ipfs/go-ipfs/blob/master/docs/examples/go-ipfs-as-a-library/main.go
