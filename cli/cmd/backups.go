@@ -148,6 +148,18 @@ var backupsPerformCmd = &cobra.Command{
 
 		backupDir := filepath.Join(repoRoot, "backups")
 
+		// Get IPNS key
+		key, err := getIpnsKeyForDevice(ctx, ipfs, deviceID)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		if key == nil {
+			fmt.Println("IPNS key does not exist for device. Have backups for this device been enabled?")
+			os.Exit(1)
+		}
+
 		// Perform backup
 		if err = idevice.PerformBackup(deviceID, backupDir); err != nil {
 			fmt.Println("Failed to perform backup:", err)
@@ -164,12 +176,12 @@ var backupsPerformCmd = &cobra.Command{
 		fmt.Printf("Added backup to IPFS (%s)\n", backupIpfsPath)
 
 		fmt.Println("Publishing latest backup path to IPNS...")
-		backupIpnsEntry, err := updateLatestBackupIpns(ctx, ipfs, backupIpfsPath)
+		backupIpnsEntry, err := updateLatestBackupIpns(ctx, ipfs, backupIpfsPath, key)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Printf("Latest backup path published to IPNS with name %s\n", backupIpnsEntry.Name())
+		fmt.Printf("Latest backup path published to IPNS (%s -> %s)\n", backupIpnsEntry.Name(), backupIpnsEntry.Value())
 	},
 }
 
@@ -226,9 +238,10 @@ func createBackupIpnsKey(ctx context.Context, ipfs icore.CoreAPI, deviceID idevi
 	return key, nil
 }
 
-func updateLatestBackupIpns(ctx context.Context, ipfs icore.CoreAPI, backupIpfsPath path.Path) (icore.IpnsEntry, error) {
+func updateLatestBackupIpns(ctx context.Context, ipfs icore.CoreAPI, backupIpfsPath path.Path, key icore.Key) (icore.IpnsEntry, error) {
 	opts := []options.NamePublishOption{
 		options.Name.AllowOffline(true),
+		options.Name.Key(key.Name()),
 	}
 
 	ipnsEntry, err := ipfs.Name().Publish(ctx, backupIpfsPath, opts...)
