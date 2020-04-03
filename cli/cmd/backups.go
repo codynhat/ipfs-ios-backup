@@ -22,10 +22,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/codynhat/ipfs-ios-backup/idevice"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
@@ -64,13 +66,14 @@ var backupsListCmd = &cobra.Command{
 	},
 }
 
-var backupsCreateCmd = &cobra.Command{
-	Use:   "create",
+var backupsPerformCmd = &cobra.Command{
+	Use:   "perform [device-id]",
 	Short: "Perform a backup",
 	Long:  "Perform a backup",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// ctx, cancel := context.WithCancel(context.Background())
-		// defer cancel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		// Find repo path
 		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
@@ -79,20 +82,34 @@ var backupsCreateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		ipfslitePath := filepath.Join(repoRoot, "ipfslite")
+		deviceID := idevice.DeviceID(args[0])
 
-		err = saveBackupCid(ipfslitePath, "test-backup")
-		if err != nil {
-			fmt.Println("Failed to save backup:", err)
+		backupDir := filepath.Join(repoRoot, "backups")
+
+		// Perform backup
+		// if err = idevice.PerformBackup(deviceID, backupDir); err != nil {
+		// 	fmt.Println(err)
+		// 	os.Exit(1)
+		// }
+
+		// Add backup to IPFS
+		if err = addBackupToIPFS(ctx, repoRoot, backupDir, deviceID); err != nil {
+			fmt.Println(err)
 			os.Exit(1)
 		}
+
+		// err = saveBackupCid(ipfslitePath, "test-backup")
+		// if err != nil {
+		// 	fmt.Println("Failed to save backup:", err)
+		// 	os.Exit(1)
+		// }
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(backupsCmd)
 	backupsCmd.AddCommand(backupsListCmd)
-	backupsCmd.AddCommand(backupsCreateCmd)
+	backupsCmd.AddCommand(backupsPerformCmd)
 }
 
 func queryBackups(ipfslitePath string) ([]string, error) {
@@ -117,6 +134,43 @@ func queryBackups(ipfslitePath string) ([]string, error) {
 	}
 
 	return nil, nil
+}
+
+func addBackupToIPFS(ctx context.Context, repoRoot string, backupDir string, deviceID idevice.DeviceID) error {
+	ipfslitePath := filepath.Join(repoRoot, "ipfslite")
+
+	// Get IPFS lite datastore
+	ds, err := ipfslite.BadgerDatastore(ipfslitePath)
+	if err != nil {
+		return fmt.Errorf("Failed to get IPFS lite datastore: %s", err)
+	}
+
+	cfg := ipfslite.Config{Offline: true}
+	lite, err := ipfslite.New(ctx, ds, nil, nil, &cfg)
+	if err != nil {
+		return fmt.Errorf("Failed to create IPFS lite node: %s", err)
+	}
+
+	backupPath := filepath.Join(backupDir, string(deviceID), "Info.plist")
+
+	f, err := os.Open(backupPath)
+	// st, err := os.Stat(backupPath)
+	// readerFile, err := files.NewReaderPathFile(backupPath, f, st)
+	// if err != nil {
+	// 	return fmt.Errorf("Failed to open backup path: %s", err)
+	// }
+
+	node, err := lite.AddFile(ctx, f, nil)
+	if err != nil {
+		return fmt.Errorf("Failed to add file to IPFS: %s", err)
+	}
+
+	err = lite.Add(ctx, node)
+	if err != nil {
+		return fmt.Errorf("Failed to add node to IPFS: %s", err)
+	}
+
+	return nil
 }
 
 func saveBackupCid(ipfslitePath string, cid string) error {
