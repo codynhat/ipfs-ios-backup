@@ -310,6 +310,13 @@ func updateLatestBackupIpns(ctx context.Context, ipfs icore.CoreAPI, backupIpfsP
 
 // See https://github.com/ipfs/go-ipfs/blob/master/docs/examples/go-ipfs-as-a-library/main.go
 func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error) {
+	// Check if swarm key exists
+	swarmKeyPath := filepath.Join(repoPath, "swarm.key")
+	_, err := os.Stat(swarmKeyPath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("Swarm key does not exist. Refusing to start IPFS node. Try running `ipfs-ios-desktop init`")
+	}
+
 	// Setup plugins
 	if err := setupPlugins(repoPath); err != nil {
 		return nil, fmt.Errorf("Failed to setup plugins: %s", err)
