@@ -185,6 +185,31 @@ var backupsPerformCmd = &cobra.Command{
 	},
 }
 
+var backupsRestoreCmd = &cobra.Command{
+	Use:   "restore [device-id]",
+	Short: "Restore a backup",
+	Long:  "Restore a backup",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		deviceID := idevice.DeviceID(args[0])
+
+		// Find repo path
+		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
+		if err != nil {
+			fmt.Println("Failed to find repo path:", err)
+			os.Exit(1)
+		}
+
+		backupDir := filepath.Join(repoRoot, "backups")
+
+		// Restore backup
+		if err = idevice.RestoreBackup(deviceID, backupDir); err != nil {
+			fmt.Println("Failed to restore backup:", err)
+			os.Exit(1)
+		}
+	},
+}
+
 var backupsListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List backups that exist",
@@ -245,6 +270,7 @@ func init() {
 	backupsCmd.AddCommand(backupsEnableCmd)
 	backupsCmd.AddCommand(backupsPerformCmd)
 	backupsCmd.AddCommand(backupsListCmd)
+	backupsCmd.AddCommand(backupsRestoreCmd)
 }
 
 func addBackupToIpfs(ctx context.Context, ipfs icore.CoreAPI, backupDir string) (path.Path, error) {
