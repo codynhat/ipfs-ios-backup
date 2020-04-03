@@ -36,8 +36,8 @@ import (
 	icore "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/options"
 	"github.com/ipfs/interface-go-ipfs-core/path"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var backupsCmd = &cobra.Command{
@@ -53,18 +53,12 @@ var backupsEnableCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		deviceID := idevice.DeviceID(args[0])
+		repoPath := viper.GetString("repoPath")
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Find repo path
-		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
-		if err != nil {
-			fmt.Println("Failed to find repo path:", err)
-			os.Exit(1)
-		}
-
-		ipfsRepoRoot := filepath.Join(repoRoot, ".ipfs")
+		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
 
 		// Spawn IPFS node
 		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
@@ -126,18 +120,12 @@ var backupsPerformCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		deviceID := idevice.DeviceID(args[0])
+		repoPath := viper.GetString("repoPath")
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Find repo path
-		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
-		if err != nil {
-			fmt.Println("Failed to find repo path:", err)
-			os.Exit(1)
-		}
-
-		ipfsRepoRoot := filepath.Join(repoRoot, ".ipfs")
+		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
 
 		// Spawn IPFS node
 		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
@@ -146,7 +134,7 @@ var backupsPerformCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		backupDir := filepath.Join(repoRoot, "backups")
+		backupDir := filepath.Join(repoPath, "backups")
 
 		// Get IPNS key
 		key, err := getIpnsKeyForDevice(ctx, ipfs, deviceID)
@@ -192,18 +180,12 @@ var backupsRestoreCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		deviceID := idevice.DeviceID(args[0])
+		repoPath := viper.GetString("repoPath")
 
-		// Find repo path
-		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
-		if err != nil {
-			fmt.Println("Failed to find repo path:", err)
-			os.Exit(1)
-		}
-
-		backupDir := filepath.Join(repoRoot, "backups")
+		backupDir := filepath.Join(repoPath, "backups")
 
 		// Restore backup
-		if err = idevice.RestoreBackup(deviceID, backupDir); err != nil {
+		if err := idevice.RestoreBackup(deviceID, backupDir); err != nil {
 			fmt.Println("Failed to restore backup:", err)
 			os.Exit(1)
 		}
@@ -218,14 +200,9 @@ var backupsListCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Find repo path
-		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
-		if err != nil {
-			fmt.Println("Failed to find repo path:", err)
-			os.Exit(1)
-		}
+		repoPath := viper.GetString("repoPath")
 
-		ipfsRepoRoot := filepath.Join(repoRoot, ".ipfs")
+		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
 
 		// Spawn IPFS node
 		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)

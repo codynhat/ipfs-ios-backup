@@ -51,6 +51,16 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	defaultRepoPath, err := homedir.Expand("~/.ipfs-ios-backup")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ipfs-ios-backup.json)")
+	rootCmd.PersistentFlags().String("repoPath", defaultRepoPath, "Path to IPFS iOS Backup repo")
+	viper.BindPFlag("repoPath", rootCmd.PersistentFlags().Lookup("repoPath"))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -66,12 +76,11 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".ipfs-ios-backup" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".ipfs-ios-backup")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	viper.AutomaticEnv()
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

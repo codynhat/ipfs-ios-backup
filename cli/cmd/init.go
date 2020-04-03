@@ -32,8 +32,8 @@ import (
 	config "github.com/ipfs/go-ipfs-config"
 	"github.com/ipfs/go-ipfs/plugin/loader"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // initCmd represents the init command
@@ -43,37 +43,32 @@ var initCmd = &cobra.Command{
 	Long:  "Initialize ipfs-ios-backup repo",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Find repo path
-		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
-		if err != nil {
-			fmt.Println("Could not create repo path:", err)
-			os.Exit(1)
-		}
-
-		_, err = os.Stat(repoRoot)
+		repoPath := viper.GetString("repoPath")
+		_, err := os.Stat(repoPath)
 		if err == nil {
-			fmt.Printf("Repo already exists at %s\n", repoRoot)
+			fmt.Printf("Repo already exists at %s\n", repoPath)
 			os.Exit(1)
 		}
 
 		// Create repo
-		if err := checkWritable(repoRoot); err != nil {
+		if err := checkWritable(repoPath); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
 		// Create backups dir
-		backupDir := filepath.Join(repoRoot, "backups")
+		backupDir := filepath.Join(repoPath, "backups")
 		if err := checkWritable(backupDir); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		if err := initIpfsRepo(repoRoot); err != nil {
+		if err := initIpfsRepo(repoPath); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("Repo created at %s\n", repoRoot)
+		fmt.Printf("Repo created at %s\n", repoPath)
 	},
 }
 
