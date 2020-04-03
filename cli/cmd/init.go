@@ -55,7 +55,15 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// Create repo
 		if err := checkWritable(repoRoot); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		// Create backups dir
+		backupDir := filepath.Join(repoRoot, "backups")
+		if err := checkWritable(backupDir); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
