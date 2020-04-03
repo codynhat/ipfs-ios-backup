@@ -26,6 +26,7 @@ package idevice
 #include <stdlib.h>
 #include <libimobiledevice/libimobiledevice.h>
 #include <libimobiledevice/lockdown.h>
+#include <libimobiledevice/devicebackup2.h>
 */
 import "C"
 
@@ -112,4 +113,21 @@ func GetDeviceName(deviceID DeviceID) (string, error) {
 	}
 
 	return C.GoString(cDeviceName), nil
+}
+
+// PerformBackup performs a backup using devicebackup2
+func PerformBackup(deviceID DeviceID, backupDirectory string) error {
+	cUdid := C.CString(string(deviceID))
+	defer C.free(unsafe.Pointer(cUdid))
+
+	cBackupDir := C.CString(backupDirectory)
+	defer C.free(unsafe.Pointer(cBackupDir))
+
+	cErr := C.run_cmd(C.CMD_BACKUP, 0, cUdid, cUdid, cBackupDir, 1, nil, nil)
+
+	if cErr < 0 {
+		return fmt.Errorf("devicebackup2 failed with error code %d", cErr)
+	}
+
+	return nil
 }

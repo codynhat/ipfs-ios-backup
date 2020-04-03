@@ -23,20 +23,46 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/codynhat/ipfs-ios-backup/idevice"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
 
-// backupsCmd represents the backups command
 var backupsCmd = &cobra.Command{
 	Use:   "backups",
 	Short: "Interact with iOS backups",
 	Long:  "Interact with iOS backups",
+}
+
+var backupsPerformCmd = &cobra.Command{
+	Use:   "perform [device-id]",
+	Short: "Perform a backup",
+	Long:  "Perform a backup",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("backups called")
+		// Find repo path
+		repoRoot, err := homedir.Expand("~/.ipfs-ios-backup")
+		if err != nil {
+			fmt.Println("Could not create repo path:", err)
+			os.Exit(1)
+		}
+
+		deviceID := idevice.DeviceID(args[0])
+
+		backupDir := filepath.Join(repoRoot, "backups")
+
+		// Perform backup
+		if err = idevice.PerformBackup(deviceID, backupDir); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(backupsCmd)
+	backupsCmd.AddCommand(backupsPerformCmd)
 }
