@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/codynhat/ipfs-ios-backup/cli/cmd"
+import "github.com/codynhat/ipfs-ios-backup/cmd"
 
 func main() {
 	cmd.Execute()
