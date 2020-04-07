@@ -100,3 +100,9 @@ ipfs-ios-backup backups restore [device-id]
 
 ![IPFS iOS Backup Architecture](https://raw.githubusercontent.com/codynhat/ipfs-ios-backup/master/docs/IPFS%20iOS%20Backup%20Architecture.png)
 
+# Roadmap
+
+- Online support to join an existing private network (seems to be blocked by https://github.com/ipfs/go-ipfs/issues/1941)
+- Encryption of metadata
+- Integration with pinning services
+
