@@ -3,25 +3,26 @@ ipfs-ios-backup
 
 Command line utility to backup iOS devices to an embedded and private IPFS node.
 
-## Dependencies
+# Installation
 
-The only dependency needed is [libimobiledevice](http://www.libimobiledevice.org/), a cross-platform library that enables communication with iOS devices. The main project has been forked to include a few more features needed for `ipfs-ios-backup`. 
-
-### macOS
-This can be installed using the Homebrew tap `codynhat/codynhat`.
+## Homebrew
 
 ``` sh
-brew install codynhat/codynhat/libimobiledevice
+brew tap codynhat/ipfs-ios-backup
+brew install ipfs-ios-backup
 ```
 
-### Building from source
-If you don't have Homebrew or are not on macOS, `libimobiledevice` can be built from source. See the [README](https://github.com/codynhat/libimobiledevice) for more info.
+## Building from source
 
-## Installation
+### Requirements
+- Go 1.14+
+- libimobiledevice
 
-``` sh
-go get -u github.com/codynhat/ipfs-ios-backup
-```
+### libimobiledevice
+
+[libimobiledevice](http://www.libimobiledevice.org/) is a cross-platform library that enables communication with iOS devices. The main project has been forked to include a few more features needed for `ipfs-ios-backup`. 
+
+See the [README](https://github.com/codynhat/libimobiledevice) for more info.
 
 ## Usage
 
