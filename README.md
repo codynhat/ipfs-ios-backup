@@ -96,13 +96,25 @@ A backup can be restored to a device. **YOUR DEVICE AND DATA WILL BE RESTORED**.
 ipfs-ios-backup backups restore [device-id]
 ```
 
+## Connect to private network
+
+Currently, the easiest way to connect `ipfs-ios-backup` to a private network is by using an IPFS daemon pointed to the embedded IPFS repo.
+
+```
+IPFS_PATH=$HOME/.ipfs-ios-backup/.ipfs ipfs daemon
+```
+
+The swarm key located in the repo (`$HOME/.ipfs-ios-backup/.ipfs/swarm.key`) must be the same as other peers in the private network. These peers will be able to query IPNS names and IPFS objects from `ipfs-ios-backup backups list`. Note, however, only the node responsible for performing backups will have the private keys for IPNS and a list of performed backups.
+
+A current limitation exists that prevents `ipfs-ios-backup` commands from running while an IPFS daemon is running.
+
 # Architecture
 
 ![IPFS iOS Backup Architecture](https://raw.githubusercontent.com/codynhat/ipfs-ios-backup/master/docs/IPFS%20iOS%20Backup%20Architecture.png)
 
 # Roadmap
 
-- Online support to join an existing private network (seems to be blocked by https://github.com/ipfs/go-ipfs/issues/1941)
+- Automatic backups performed by a daemon
 - Encryption of metadata
 - Integration with pinning services
 
