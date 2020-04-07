@@ -98,5 +98,5 @@ ipfs-ios-backup backups restore [device-id]
 
 # Architecture
 
-![IPFS iOS Backup Architecture](./docs/IPFS iOS Backup Architecture.png)
+![IPFS iOS Backup Architecture](https://raw.githubusercontent.com/codynhat/ipfs-ios-backup/master/docs/IPFS iOS Backup Architecture.png)
 
