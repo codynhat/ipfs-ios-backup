@@ -24,7 +24,7 @@ brew install ipfs-ios-backup
 
 See the [README](https://github.com/codynhat/libimobiledevice) for more info.
 
-## Usage
+# Usage
 
 ```
 Backup iOS devices to IPFS
@@ -46,7 +46,7 @@ Flags:
 Use "ipfs-ios-backup [command] --help" for more information about a command.
 ```
 
-### Initialize repo
+## Initialize repo
 
 The repo will need to be initialized before doing anything.
 ``` sh
@@ -66,7 +66,7 @@ or set `repoPath` in the configuration file at `$HOME/.ipfs-ios-backup.json`.
 }
 ```
 
-### Finding devices
+## Finding devices
 
 Search for devices connected via USB or on the same Wifi network.
 
@@ -74,7 +74,7 @@ Search for devices connected via USB or on the same Wifi network.
 ipfs-ios-backup devices list
 ```
 
-### Enable backups for a device
+## Enable backups for a device
 
 ```
 ipfs-ios-backup backups enable [device-id]
@@ -82,16 +82,21 @@ ipfs-ios-backup backups enable [device-id]
 
 You will be prompted to enter a password to use for encrypting backups for this device. The password is not stored anywhere on your computer. The backup is encrypted on your iOS device before any data is sent to your computer.
 
-### Perform a backup
+## Perform a backup
 
 ```
 ipfs-ios-backup backups perform [device-id]
 ```
 
-### Restore a backup
+## Restore a backup
 
 A backup can be restored to a device. **YOUR DEVICE AND DATA WILL BE RESTORED**. You will be prompted to enter the password of the backup before the restore begins.
 
 ```
 ipfs-ios-backup backups restore [device-id]
 ```
+
+# Architecture
+
+![IPFS iOS Backup Architecture](./docs/IPFS iOS Backup Architecture.png)
+
