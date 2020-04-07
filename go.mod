@@ -3,7 +3,6 @@ module github.com/codynhat/ipfs-ios-backup
 go 1.14
 
 require (
-	github.com/ipfs/go-cid v0.0.4
 	github.com/ipfs/go-ipfs v0.4.23
 	github.com/ipfs/go-ipfs-config v0.0.3
 	github.com/ipfs/go-ipfs-files v0.0.3
