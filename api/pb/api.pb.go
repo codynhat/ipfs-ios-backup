@@ -29,16 +29,17 @@ const (
 // of the legacy proto package is being used.
 const _ = proto.ProtoPackageIsVersion4
 
-type InitRequest struct {
+type Key struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RepoPath string `protobuf:"bytes,1,opt,name=repoPath,proto3" json:"repoPath,omitempty"`
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Path string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
 }
 
-func (x *InitRequest) Reset() {
-	*x = InitRequest{}
+func (x *Key) Reset() {
+	*x = Key{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_api_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -46,13 +47,13 @@ func (x *InitRequest) Reset() {
 	}
 }
 
-func (x *InitRequest) String() string {
+func (x *Key) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*InitRequest) ProtoMessage() {}
+func (*Key) ProtoMessage() {}
 
-func (x *InitRequest) ProtoReflect() protoreflect.Message {
+func (x *Key) ProtoReflect() protoreflect.Message {
 	mi := &file_api_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -64,26 +65,35 @@ func (x *InitRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use InitRequest.ProtoReflect.Descriptor instead.
-func (*InitRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use Key.ProtoReflect.Descriptor instead.
+func (*Key) Descriptor() ([]byte, []int) {
 	return file_api_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *InitRequest) GetRepoPath() string {
+func (x *Key) GetName() string {
 	if x != nil {
-		return x.RepoPath
+		return x.Name
 	}
 	return ""
 }
 
-type InitReply struct {
+func (x *Key) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type GetKeyForDeviceRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
+
+	DeviceID string `protobuf:"bytes,1,opt,name=deviceID,proto3" json:"deviceID,omitempty"`
 }
 
-func (x *InitReply) Reset() {
-	*x = InitReply{}
+func (x *GetKeyForDeviceRequest) Reset() {
+	*x = GetKeyForDeviceRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_api_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -91,13 +101,13 @@ func (x *InitReply) Reset() {
 	}
 }
 
-func (x *InitReply) String() string {
+func (x *GetKeyForDeviceRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*InitReply) ProtoMessage() {}
+func (*GetKeyForDeviceRequest) ProtoMessage() {}
 
-func (x *InitReply) ProtoReflect() protoreflect.Message {
+func (x *GetKeyForDeviceRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -109,23 +119,193 @@ func (x *InitReply) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use InitReply.ProtoReflect.Descriptor instead.
-func (*InitReply) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetKeyForDeviceRequest.ProtoReflect.Descriptor instead.
+func (*GetKeyForDeviceRequest) Descriptor() ([]byte, []int) {
 	return file_api_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GetKeyForDeviceRequest) GetDeviceID() string {
+	if x != nil {
+		return x.DeviceID
+	}
+	return ""
+}
+
+type GetKeyForDeviceReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Key *Key `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+}
+
+func (x *GetKeyForDeviceReply) Reset() {
+	*x = GetKeyForDeviceReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetKeyForDeviceReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetKeyForDeviceReply) ProtoMessage() {}
+
+func (x *GetKeyForDeviceReply) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetKeyForDeviceReply.ProtoReflect.Descriptor instead.
+func (*GetKeyForDeviceReply) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetKeyForDeviceReply) GetKey() *Key {
+	if x != nil {
+		return x.Key
+	}
+	return nil
+}
+
+type CreateKeyForDeviceRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	DeviceID string `protobuf:"bytes,1,opt,name=deviceID,proto3" json:"deviceID,omitempty"`
+}
+
+func (x *CreateKeyForDeviceRequest) Reset() {
+	*x = CreateKeyForDeviceRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateKeyForDeviceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateKeyForDeviceRequest) ProtoMessage() {}
+
+func (x *CreateKeyForDeviceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateKeyForDeviceRequest.ProtoReflect.Descriptor instead.
+func (*CreateKeyForDeviceRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CreateKeyForDeviceRequest) GetDeviceID() string {
+	if x != nil {
+		return x.DeviceID
+	}
+	return ""
+}
+
+type CreateKeyForDeviceReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Key *Key `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+}
+
+func (x *CreateKeyForDeviceReply) Reset() {
+	*x = CreateKeyForDeviceReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateKeyForDeviceReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateKeyForDeviceReply) ProtoMessage() {}
+
+func (x *CreateKeyForDeviceReply) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateKeyForDeviceReply.ProtoReflect.Descriptor instead.
+func (*CreateKeyForDeviceReply) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CreateKeyForDeviceReply) GetKey() *Key {
+	if x != nil {
+		return x.Key
+	}
+	return nil
 }
 
 var File_api_proto protoreflect.FileDescriptor
 
 var file_api_proto_rawDesc = []byte{
 	0x0a, 0x09, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x06, 0x61, 0x70, 0x69,
-	0x2e, 0x70, 0x62, 0x22, 0x29, 0x0a, 0x0b, 0x49, 0x6e, 0x69, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x50, 0x61, 0x74, 0x68, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x50, 0x61, 0x74, 0x68, 0x22, 0x0b,
-	0x0a, 0x09, 0x49, 0x6e, 0x69, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x32, 0x37, 0x0a, 0x03, 0x41,
-	0x50, 0x49, 0x12, 0x30, 0x0a, 0x04, 0x49, 0x6e, 0x69, 0x74, 0x12, 0x13, 0x2e, 0x61, 0x70, 0x69,
-	0x2e, 0x70, 0x62, 0x2e, 0x49, 0x6e, 0x69, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x11, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x49, 0x6e, 0x69, 0x74, 0x52, 0x65, 0x70,
-	0x6c, 0x79, 0x22, 0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x2e, 0x70, 0x62, 0x22, 0x2d, 0x0a, 0x03, 0x4b, 0x65, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61,
+	0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x12,
+	0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61,
+	0x74, 0x68, 0x22, 0x34, 0x0a, 0x16, 0x47, 0x65, 0x74, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44,
+	0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08,
+	0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
+	0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x22, 0x35, 0x0a, 0x14, 0x47, 0x65, 0x74, 0x4b,
+	0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79,
+	0x12, 0x1d, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0b, 0x2e,
+	0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x4b, 0x65, 0x79, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x22,
+	0x37, 0x0a, 0x19, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44,
+	0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08,
+	0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
+	0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x22, 0x38, 0x0a, 0x17, 0x43, 0x72, 0x65, 0x61,
+	0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65,
+	0x70, 0x6c, 0x79, 0x12, 0x1d, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x0b, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x4b, 0x65, 0x79, 0x52, 0x03, 0x6b,
+	0x65, 0x79, 0x32, 0xb4, 0x01, 0x0a, 0x03, 0x41, 0x50, 0x49, 0x12, 0x51, 0x0a, 0x0f, 0x47, 0x65,
+	0x74, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x12, 0x1e, 0x2e,
+	0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x74, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72,
+	0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1c, 0x2e,
+	0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x74, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72,
+	0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22, 0x00, 0x12, 0x5a, 0x0a,
+	0x12, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76,
+	0x69, 0x63, 0x65, 0x12, 0x21, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x43, 0x72, 0x65,
+	0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e,
+	0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69,
+	0x63, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22, 0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
@@ -140,19 +320,26 @@ func file_api_proto_rawDescGZIP() []byte {
 	return file_api_proto_rawDescData
 }
 
-var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_api_proto_goTypes = []interface{}{
-	(*InitRequest)(nil), // 0: api.pb.InitRequest
-	(*InitReply)(nil),   // 1: api.pb.InitReply
+	(*Key)(nil),                       // 0: api.pb.Key
+	(*GetKeyForDeviceRequest)(nil),    // 1: api.pb.GetKeyForDeviceRequest
+	(*GetKeyForDeviceReply)(nil),      // 2: api.pb.GetKeyForDeviceReply
+	(*CreateKeyForDeviceRequest)(nil), // 3: api.pb.CreateKeyForDeviceRequest
+	(*CreateKeyForDeviceReply)(nil),   // 4: api.pb.CreateKeyForDeviceReply
 }
 var file_api_proto_depIdxs = []int32{
-	0, // 0: api.pb.API.Init:input_type -> api.pb.InitRequest
-	1, // 1: api.pb.API.Init:output_type -> api.pb.InitReply
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: api.pb.GetKeyForDeviceReply.key:type_name -> api.pb.Key
+	0, // 1: api.pb.CreateKeyForDeviceReply.key:type_name -> api.pb.Key
+	1, // 2: api.pb.API.GetKeyForDevice:input_type -> api.pb.GetKeyForDeviceRequest
+	3, // 3: api.pb.API.CreateKeyForDevice:input_type -> api.pb.CreateKeyForDeviceRequest
+	2, // 4: api.pb.API.GetKeyForDevice:output_type -> api.pb.GetKeyForDeviceReply
+	4, // 5: api.pb.API.CreateKeyForDevice:output_type -> api.pb.CreateKeyForDeviceReply
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_init() }
@@ -162,7 +349,7 @@ func file_api_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_api_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*InitRequest); i {
+			switch v := v.(*Key); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -174,7 +361,43 @@ func file_api_proto_init() {
 			}
 		}
 		file_api_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*InitReply); i {
+			switch v := v.(*GetKeyForDeviceRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetKeyForDeviceReply); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateKeyForDeviceRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateKeyForDeviceReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -192,7 +415,7 @@ func file_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -218,7 +441,8 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type APIClient interface {
-	Init(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*InitReply, error)
+	GetKeyForDevice(ctx context.Context, in *GetKeyForDeviceRequest, opts ...grpc.CallOption) (*GetKeyForDeviceReply, error)
+	CreateKeyForDevice(ctx context.Context, in *CreateKeyForDeviceRequest, opts ...grpc.CallOption) (*CreateKeyForDeviceReply, error)
 }
 
 type aPIClient struct {
@@ -229,9 +453,18 @@ func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
 }
 
-func (c *aPIClient) Init(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*InitReply, error) {
-	out := new(InitReply)
-	err := c.cc.Invoke(ctx, "/api.pb.API/Init", in, out, opts...)
+func (c *aPIClient) GetKeyForDevice(ctx context.Context, in *GetKeyForDeviceRequest, opts ...grpc.CallOption) (*GetKeyForDeviceReply, error) {
+	out := new(GetKeyForDeviceReply)
+	err := c.cc.Invoke(ctx, "/api.pb.API/GetKeyForDevice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aPIClient) CreateKeyForDevice(ctx context.Context, in *CreateKeyForDeviceRequest, opts ...grpc.CallOption) (*CreateKeyForDeviceReply, error) {
+	out := new(CreateKeyForDeviceReply)
+	err := c.cc.Invoke(ctx, "/api.pb.API/CreateKeyForDevice", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -240,35 +473,57 @@ func (c *aPIClient) Init(ctx context.Context, in *InitRequest, opts ...grpc.Call
 
 // APIServer is the server API for API service.
 type APIServer interface {
-	Init(context.Context, *InitRequest) (*InitReply, error)
+	GetKeyForDevice(context.Context, *GetKeyForDeviceRequest) (*GetKeyForDeviceReply, error)
+	CreateKeyForDevice(context.Context, *CreateKeyForDeviceRequest) (*CreateKeyForDeviceReply, error)
 }
 
 // UnimplementedAPIServer can be embedded to have forward compatible implementations.
 type UnimplementedAPIServer struct {
 }
 
-func (*UnimplementedAPIServer) Init(context.Context, *InitRequest) (*InitReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Init not implemented")
+func (*UnimplementedAPIServer) GetKeyForDevice(context.Context, *GetKeyForDeviceRequest) (*GetKeyForDeviceReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetKeyForDevice not implemented")
+}
+func (*UnimplementedAPIServer) CreateKeyForDevice(context.Context, *CreateKeyForDeviceRequest) (*CreateKeyForDeviceReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateKeyForDevice not implemented")
 }
 
 func RegisterAPIServer(s *grpc.Server, srv APIServer) {
 	s.RegisterService(&_API_serviceDesc, srv)
 }
 
-func _API_Init_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(InitRequest)
+func _API_GetKeyForDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetKeyForDeviceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).Init(ctx, in)
+		return srv.(APIServer).GetKeyForDevice(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.pb.API/Init",
+		FullMethod: "/api.pb.API/GetKeyForDevice",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).Init(ctx, req.(*InitRequest))
+		return srv.(APIServer).GetKeyForDevice(ctx, req.(*GetKeyForDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _API_CreateKeyForDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateKeyForDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).CreateKeyForDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.pb.API/CreateKeyForDevice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).CreateKeyForDevice(ctx, req.(*CreateKeyForDeviceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -278,8 +533,12 @@ var _API_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*APIServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Init",
-			Handler:    _API_Init_Handler,
+			MethodName: "GetKeyForDevice",
+			Handler:    _API_GetKeyForDevice_Handler,
+		},
+		{
+			MethodName: "CreateKeyForDevice",
+			Handler:    _API_CreateKeyForDevice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

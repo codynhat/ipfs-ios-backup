@@ -29,11 +29,6 @@ import (
 
 	"github.com/codynhat/ipfs-ios-backup/idevice"
 	files "github.com/ipfs/go-ipfs-files"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreapi"
-	"github.com/ipfs/go-ipfs/core/node/libp2p"
-	"github.com/ipfs/go-ipfs/plugin/loader"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	icore "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/options"
 	"github.com/ipfs/interface-go-ipfs-core/path"
@@ -54,19 +49,9 @@ var backupsEnableCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		deviceID := idevice.DeviceID(args[0])
-		repoPath := viper.GetString("repoPath")
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-
-		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
-
-		// Spawn IPFS node
-		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
-		if err != nil {
-			fmt.Println("Failed to spawn IPFS node:", err)
-			os.Exit(1)
-		}
 
 		// Pair device
 		fmt.Println("Pairing device...")
@@ -94,22 +79,25 @@ var backupsEnableCmd = &cobra.Command{
 		fmt.Println("Backup encryption is enabled.")
 
 		// Create IPNS key
-		key, err := getIpnsKeyForDevice(ctx, ipfs, deviceID)
+		reply, err := client.GetKeyForDevice(ctx, string(deviceID))
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
+		key := reply.Key
+
 		if key == nil {
 			fmt.Println("Generating IPNS key...")
-			key, err = createBackupIpnsKey(ctx, ipfs, deviceID)
+			reply, err := client.CreateKeyForDevice(ctx, string(deviceID))
+			key = reply.Key
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
-			fmt.Printf("Generated IPNS key (%s -> %s)\n", key.Name(), key.Path())
+			fmt.Printf("Generated IPNS key (%s -> %s)\n", key.Name, key.Path)
 		} else {
-			fmt.Printf("IPNS key exists (%s -> %s)\n", key.Name(), key.Path())
+			fmt.Printf("IPNS key exists (%s -> %s)\n", key.Name, key.Path)
 		}
 	},
 }
@@ -312,42 +300,6 @@ func updateLatestBackupIpns(ctx context.Context, ipfs icore.CoreAPI, backupIpfsP
 	return ipnsEntry, nil
 }
 
-// See https://github.com/ipfs/go-ipfs/blob/master/docs/examples/go-ipfs-as-a-library/main.go
-func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error) {
-	// Check if swarm key exists
-	swarmKeyPath := filepath.Join(repoPath, "swarm.key")
-	_, err := os.Stat(swarmKeyPath)
-	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("Swarm key does not exist. Refusing to start IPFS node. Try running `ipfs-ios-desktop init`")
-	}
-
-	// Setup plugins
-	if err := setupPlugins(repoPath); err != nil {
-		return nil, fmt.Errorf("Failed to setup plugins: %s", err)
-	}
-
-	// Open the repo
-	repo, err := fsrepo.Open(repoPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Construct the node
-	nodeOptions := &core.BuildCfg{
-		Online:  false,
-		Routing: libp2p.NilRouterOption,
-		Repo:    repo,
-	}
-
-	node, err := core.NewNode(ctx, nodeOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	// Attach the Core API to the constructed node
-	return coreapi.NewCoreAPI(node)
-}
-
 func getUnixfsNode(path string) (files.Node, error) {
 	st, err := os.Stat(path)
 	if err != nil {
@@ -360,24 +312,4 @@ func getUnixfsNode(path string) (files.Node, error) {
 	}
 
 	return f, nil
-}
-
-// Taken from go-ipfs example
-func setupPlugins(externalPluginsPath string) error {
-	// Load any external plugins if available on externalPluginsPath
-	plugins, err := loader.NewPluginLoader(filepath.Join(externalPluginsPath, "plugins"))
-	if err != nil {
-		return fmt.Errorf("error loading plugins: %s", err)
-	}
-
-	// Load preloaded and external plugins
-	if err := plugins.Initialize(); err != nil {
-		return fmt.Errorf("error initializing plugins: %s", err)
-	}
-
-	if err := plugins.Inject(); err != nil {
-		return fmt.Errorf("error initializing plugins: %s", err)
-	}
-
-	return nil
 }

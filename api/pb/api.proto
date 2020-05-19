@@ -2,12 +2,28 @@ syntax = "proto3";
 
 package api.pb;
 
-message InitRequest {
-    string repoPath = 1;
+message Key {
+    string name = 1;
+    string path = 2;
 }
 
-message InitReply {}
+message GetKeyForDeviceRequest {
+    string deviceID = 1;
+}
+
+message GetKeyForDeviceReply {
+    Key key = 1;
+}
+
+message CreateKeyForDeviceRequest {
+    string deviceID = 1;
+}
+
+message CreateKeyForDeviceReply {
+    Key key = 1;
+}
 
 service API {
-    rpc Init(InitRequest) returns (InitReply) {}
+    rpc GetKeyForDevice(GetKeyForDeviceRequest) returns (GetKeyForDeviceReply) {}
+    rpc CreateKeyForDevice(CreateKeyForDeviceRequest) returns (CreateKeyForDeviceReply) {}
 }

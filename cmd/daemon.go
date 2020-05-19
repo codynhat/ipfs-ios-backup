@@ -22,14 +22,22 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 
 	"github.com/codynhat/ipfs-ios-backup/api"
 	pb "github.com/codynhat/ipfs-ios-backup/api/pb"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/node/libp2p"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	icore "github.com/ipfs/interface-go-ipfs-core"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )
 
@@ -39,6 +47,21 @@ var daemonCmd = &cobra.Command{
 	Short: "Run the ipfs-ios-backup daemon",
 	Long:  "Run the ipfs-ios-backup daemon",
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Find repo path
+		repoPath := viper.GetString("repoPath")
+
+		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
+
+		// Spawn IPFS node
+		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
+		if err != nil {
+			fmt.Println("Failed to spawn IPFS node:", err)
+			os.Exit(1)
+		}
+
 		ptarget, err := TcpAddrFromMultiAddr(addr)
 		if err != nil {
 			fmt.Println(err)
@@ -51,7 +74,7 @@ var daemonCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		service := &api.Service{}
+		service := api.NewService(ipfs)
 
 		grpcServer := grpc.NewServer()
 		pb.RegisterAPIServer(grpcServer, service)
@@ -77,4 +100,40 @@ func TcpAddrFromMultiAddr(maddr ma.Multiaddr) (addr string, err error) {
 		return
 	}
 	return fmt.Sprintf("%s:%s", ip4, tcp), nil
+}
+
+// See https://github.com/ipfs/go-ipfs/blob/master/docs/examples/go-ipfs-as-a-library/main.go
+func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error) {
+	// Check if swarm key exists
+	swarmKeyPath := filepath.Join(repoPath, "swarm.key")
+	_, err := os.Stat(swarmKeyPath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("Swarm key does not exist. Refusing to start IPFS node. Try running `ipfs-ios-desktop init`")
+	}
+
+	// Setup plugins
+	if err := setupPlugins(repoPath); err != nil {
+		return nil, fmt.Errorf("Failed to setup plugins: %s", err)
+	}
+
+	// Open the repo
+	repo, err := fsrepo.Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Construct the node
+	nodeOptions := &core.BuildCfg{
+		Online:  false,
+		Routing: libp2p.NilRouterOption,
+		Repo:    repo,
+	}
+
+	node, err := core.NewNode(ctx, nodeOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	// Attach the Core API to the constructed node
+	return coreapi.NewCoreAPI(node)
 }

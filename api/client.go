@@ -30,9 +30,16 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-// Init initializes the repo
-func (c *Client) Init(ctx context.Context, repoPath string) (*pb.InitReply, error) {
-	return c.c.Init(ctx, &pb.InitRequest{
-		RepoPath: repoPath,
+// GetKeyForDevice fetches the IPNS key for a device
+func (c *Client) GetKeyForDevice(ctx context.Context, deviceID string) (*pb.GetKeyForDeviceReply, error) {
+	return c.c.GetKeyForDevice(ctx, &pb.GetKeyForDeviceRequest{
+		DeviceID: deviceID,
+	})
+}
+
+// CreateKeyForDevice creates a new IPNS key for a device
+func (c *Client) CreateKeyForDevice(ctx context.Context, deviceID string) (*pb.CreateKeyForDeviceReply, error) {
+	return c.c.CreateKeyForDevice(ctx, &pb.CreateKeyForDeviceRequest{
+		DeviceID: deviceID,
 	})
 }
