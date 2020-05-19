@@ -32,6 +32,7 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/core/node/libp2p"
+	"github.com/ipfs/go-ipfs/plugin/loader"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	icore "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/options"
@@ -359,4 +360,24 @@ func getUnixfsNode(path string) (files.Node, error) {
 	}
 
 	return f, nil
+}
+
+// Taken from go-ipfs example
+func setupPlugins(externalPluginsPath string) error {
+	// Load any external plugins if available on externalPluginsPath
+	plugins, err := loader.NewPluginLoader(filepath.Join(externalPluginsPath, "plugins"))
+	if err != nil {
+		return fmt.Errorf("error loading plugins: %s", err)
+	}
+
+	// Load preloaded and external plugins
+	if err := plugins.Initialize(); err != nil {
+		return fmt.Errorf("error initializing plugins: %s", err)
+	}
+
+	if err := plugins.Inject(); err != nil {
+		return fmt.Errorf("error initializing plugins: %s", err)
+	}
+
+	return nil
 }

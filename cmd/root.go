@@ -25,19 +25,59 @@ import (
 	"fmt"
 	"os"
 
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+
+	"github.com/codynhat/ipfs-ios-backup/api"
+	"google.golang.org/grpc"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	client  *api.Client
+	addr    ma.Multiaddr
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ipfs-ios-backup",
 	Short: "Backup iOS devices to IPFS",
 	Long:  "Backup iOS devices to IPFS",
+	PersistentPreRun: func(c *cobra.Command, args []string) {
+		var opts []grpc.DialOption
+		addrAPI := viper.GetString("addrAPI")
+		opts = append(opts, grpc.WithInsecure())
+		var err error
+
+		addr, err = ma.NewMultiaddr(addrAPI)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		ptarget, err := TcpAddrFromMultiAddr(addr)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		client, err = api.NewClient(ptarget, opts...)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	},
+	PersistentPostRun: func(c *cobra.Command, args []string) {
+		if client != nil {
+			if err := client.Close(); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -61,6 +101,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ipfs-ios-backup.json)")
 	rootCmd.PersistentFlags().String("repoPath", defaultRepoPath, "Path to IPFS iOS Backup repo")
 	viper.BindPFlag("repoPath", rootCmd.PersistentFlags().Lookup("repoPath"))
+
+	rootCmd.PersistentFlags().String("addrAPI", "/ip4/127.0.0.1/tcp/3006", "API endpoint")
+	viper.BindPFlag("addrAPI", rootCmd.PersistentFlags().Lookup("addrAPI"))
 }
 
 // initConfig reads in config file and ENV variables if set.

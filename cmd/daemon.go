@@ -22,34 +22,59 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"context"
 	"fmt"
+	"net"
 	"os"
 
+	"github.com/codynhat/ipfs-ios-backup/api"
+	pb "github.com/codynhat/ipfs-ios-backup/api/pb"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
 
-// initCmd represents the init command
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialize ipfs-ios-backup repo",
-	Long:  "Initialize ipfs-ios-backup repo",
+// daemonCmd represents the daemon command
+var daemonCmd = &cobra.Command{
+	Use:   "daemon",
+	Short: "Run the ipfs-ios-backup daemon",
+	Long:  "Run the ipfs-ios-backup daemon",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Find repo path
-		repoPath := viper.GetString("repoPath")
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		_, err := client.Init(ctx, repoPath)
+		ptarget, err := TcpAddrFromMultiAddr(addr)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+
+		lis, err := net.Listen("tcp", ptarget)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		service := &api.Service{}
+
+		grpcServer := grpc.NewServer()
+		pb.RegisterAPIServer(grpcServer, service)
+		grpcServer.Serve(lis)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(daemonCmd)
+}
+
+func TcpAddrFromMultiAddr(maddr ma.Multiaddr) (addr string, err error) {
+	if maddr == nil {
+		err = fmt.Errorf("invalid address")
+		return
+	}
+	ip4, err := maddr.ValueForProtocol(ma.P_IP4)
+	if err != nil {
+		return
+	}
+	tcp, err := maddr.ValueForProtocol(ma.P_TCP)
+	if err != nil {
+		return
+	}
+	return fmt.Sprintf("%s:%s", ip4, tcp), nil
 }

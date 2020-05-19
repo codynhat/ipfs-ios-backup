@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package api.pb;
+
+message InitRequest {
+    string repoPath = 1;
+}
+
+message InitReply {}
+
+service API {
+    rpc Init(InitRequest) returns (InitReply) {}
+}
