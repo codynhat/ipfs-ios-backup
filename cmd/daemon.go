@@ -27,9 +27,12 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/codynhat/ipfs-ios-backup/api"
 	pb "github.com/codynhat/ipfs-ios-backup/api/pb"
+	"github.com/codynhat/ipfs-ios-backup/idevice"
+	"github.com/go-co-op/gocron"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/core/node/libp2p"
@@ -59,6 +62,13 @@ var daemonCmd = &cobra.Command{
 		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
 		if err != nil {
 			fmt.Println("Failed to spawn IPFS node:", err)
+			os.Exit(1)
+		}
+
+		// Run schedules
+		err = startSchedules(ctx, viper.Sub("schedules"), repoPath)
+		if err != nil {
+			fmt.Println(err)
 			os.Exit(1)
 		}
 
@@ -136,4 +146,36 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 
 	// Attach the Core API to the constructed node
 	return coreapi.NewCoreAPI(node)
+}
+
+func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string) error {
+	s1 := gocron.NewScheduler(time.UTC)
+
+	for rawDeviceID := range schedules.AllSettings() {
+		deviceID := idevice.DeviceID(rawDeviceID)
+
+		schedule := schedules.Sub(rawDeviceID)
+		periodInHours := schedule.GetUint64("periodInHours")
+
+		onlyWhenCharging := false
+		var minBatteryLevel int
+		if schedule.IsSet("onlyWhenCharging") {
+			onlyWhenCharging = schedule.GetBool("onlyWhenCharging")
+		} else {
+			minBatteryLevel = schedule.GetInt("minBatteryLevel")
+		}
+
+		s1.Every(uint64(periodInHours)).Hours().StartImmediately().Do(runScheduledBackup, ctx, deviceID, repoPath, minBatteryLevel, onlyWhenCharging)
+
+		fmt.Printf("Scheduled backup for device %s (%v)\n", deviceID, schedule.AllSettings())
+	}
+
+	s1.Start()
+
+	return nil
+}
+
+func runScheduledBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath string, minBatteryLevel int, onlyWhenCharging bool) error {
+	fmt.Printf("Backup triggered for device %s\n", deviceID)
+	return performBackup(ctx, deviceID, repoPath)
 }

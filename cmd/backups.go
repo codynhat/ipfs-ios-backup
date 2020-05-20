@@ -110,44 +110,11 @@ var backupsPerformCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		backupDir := filepath.Join(repoPath, "backups")
-
-		// Get IPNS key
-		reply, err := client.GetKeyForDevice(ctx, string(deviceID))
+		err := performBackup(ctx, deviceID, repoPath)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
-		key := reply.Key
-
-		if key == nil {
-			fmt.Println("IPNS key does not exist for device. Have backups for this device been enabled?")
-			os.Exit(1)
-		}
-
-		// Perform backup
-		if err = idevice.PerformBackup(deviceID, backupDir); err != nil {
-			fmt.Println("Failed to perform backup:", err)
-			os.Exit(1)
-		}
-
-		// Add backup to IPFS
-		fmt.Println("Adding backup to IPFS...")
-		backupIpfsPath, err := client.AddBackup(ctx, backupDir)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		fmt.Printf("Added backup to IPFS (%s)\n", backupIpfsPath)
-
-		fmt.Println("Publishing latest backup path to IPNS...")
-		backupIpnsEntry, err := client.UpdateLatestBackup(ctx, string(deviceID), backupIpfsPath.BackupPath)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		fmt.Printf("Latest backup path published to IPNS (%s -> %s)\n", backupIpnsEntry.Entry.Name, backupIpnsEntry.Entry.Value)
 	},
 }
 
@@ -204,4 +171,44 @@ func init() {
 	backupsCmd.AddCommand(backupsPerformCmd)
 	backupsCmd.AddCommand(backupsListCmd)
 	backupsCmd.AddCommand(backupsRestoreCmd)
+}
+
+func performBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath string) error {
+	fmt.Printf("Performing backup for device %s...\n", deviceID)
+
+	backupDir := filepath.Join(repoPath, "backups")
+
+	// Get IPNS key
+	reply, err := client.GetKeyForDevice(ctx, string(deviceID))
+	if err != nil {
+		return err
+	}
+
+	key := reply.Key
+
+	if key == nil {
+		return fmt.Errorf("IPNS key does not exist for device. Have backups for this device been enabled?")
+	}
+
+	// Perform backup
+	if err = idevice.PerformBackup(deviceID, backupDir); err != nil {
+		return fmt.Errorf("failed to perform backup: %s", err)
+	}
+
+	// Add backup to IPFS
+	fmt.Println("Adding backup to IPFS...")
+	backupIpfsPath, err := client.AddBackup(ctx, backupDir)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Added backup to IPFS (%s)\n", backupIpfsPath)
+
+	fmt.Println("Publishing latest backup path to IPNS...")
+	backupIpnsEntry, err := client.UpdateLatestBackup(ctx, string(deviceID), backupIpfsPath.BackupPath)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Latest backup path published to IPNS (%s -> %s)\n", backupIpnsEntry.Entry.Name, backupIpnsEntry.Entry.Value)
+
+	return nil
 }
