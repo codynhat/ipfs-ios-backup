@@ -34,11 +34,13 @@ Usage:
 
 Available Commands:
   backups     Interact with iOS backups
+  daemon      Run the ipfs-ios-backup daemon
   devices     Interact with connected iOS devices
   help        Help about any command
   init        Initialize ipfs-ios-backup repo
 
 Flags:
+      --addrAPI string    API endpoint (default "/ip4/127.0.0.1/tcp/3006")
       --config string     config file (default is $HOME/.ipfs-ios-backup.json)
   -h, --help              help for ipfs-ios-backup
       --repoPath string   Path to IPFS iOS Backup repo (default "/Users/Cody/.ipfs-ios-backup")
@@ -64,6 +66,12 @@ or set `repoPath` in the configuration file at `$HOME/.ipfs-ios-backup.json`.
 {
     "repoPath": "$HOME/.ipfs-ios-backup-custom"
 }
+```
+
+## Run the daemon
+Interacting with backups requires the daemon to be running
+``` sh
+ipfs-ios-desktop daemon
 ```
 
 ## Finding devices
@@ -106,7 +114,7 @@ IPFS_PATH=$HOME/.ipfs-ios-backup/.ipfs ipfs daemon
 
 The swarm key located in the repo (`$HOME/.ipfs-ios-backup/.ipfs/swarm.key`) must be the same as other peers in the private network. These peers will be able to query IPNS names and IPFS objects from `ipfs-ios-backup backups list`. Note, however, only the node responsible for performing backups will have the private keys for IPNS and a list of performed backups.
 
-A current limitation exists that prevents `ipfs-ios-backup` commands from running while an IPFS daemon is running.
+A current limitation exists that prevents `ipfs-ios-backup` daemon from running while an IPFS daemon is running.
 
 # Architecture
 

@@ -43,3 +43,23 @@ func (c *Client) CreateKeyForDevice(ctx context.Context, deviceID string) (*pb.C
 		DeviceID: deviceID,
 	})
 }
+
+// AddBackup adds a new backup to IPFS
+func (c *Client) AddBackup(ctx context.Context, backupDir string) (*pb.AddBackupReply, error) {
+	return c.c.AddBackup(ctx, &pb.AddBackupRequest{
+		BackupDir: backupDir,
+	})
+}
+
+// UpdateLatestBackup saves a reference to the latest backup
+func (c *Client) UpdateLatestBackup(ctx context.Context, deviceID string, backupPath string) (*pb.UpdateLatestBackupReply, error) {
+	return c.c.UpdateLatestBackup(ctx, &pb.UpdateLatestBackupRequest{
+		DeviceID:   deviceID,
+		BackupPath: backupPath,
+	})
+}
+
+// ListBackups lists all known backups
+func (c *Client) ListBackups(ctx context.Context) (*pb.ListBackupsReply, error) {
+	return c.c.ListBackups(ctx, &pb.ListBackupsRequest{})
+}

@@ -4,12 +4,12 @@ go 1.14
 
 require (
 	github.com/golang/protobuf v1.4.0
-	github.com/ipfs/go-ipfs v0.4.23
-	github.com/ipfs/go-ipfs-config v0.0.3
-	github.com/ipfs/go-ipfs-files v0.0.3
-	github.com/ipfs/interface-go-ipfs-core v0.0.8
+	github.com/ipfs/go-ipfs v0.5.1
+	github.com/ipfs/go-ipfs-config v0.5.3
+	github.com/ipfs/go-ipfs-files v0.0.8
+	github.com/ipfs/interface-go-ipfs-core v0.2.7
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/multiformats/go-multiaddr v0.0.4
+	github.com/multiformats/go-multiaddr v0.2.1
 	github.com/spf13/cobra v0.0.7
 	github.com/spf13/viper v1.4.0
 	google.golang.org/grpc v1.29.1

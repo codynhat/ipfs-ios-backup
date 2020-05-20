@@ -28,10 +28,6 @@ import (
 	"path/filepath"
 
 	"github.com/codynhat/ipfs-ios-backup/idevice"
-	files "github.com/ipfs/go-ipfs-files"
-	icore "github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/options"
-	"github.com/ipfs/interface-go-ipfs-core/path"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -114,23 +110,16 @@ var backupsPerformCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
-
-		// Spawn IPFS node
-		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
-		if err != nil {
-			fmt.Println("Failed to spawn IPFS node:", err)
-			os.Exit(1)
-		}
-
 		backupDir := filepath.Join(repoPath, "backups")
 
 		// Get IPNS key
-		key, err := getIpnsKeyForDevice(ctx, ipfs, deviceID)
+		reply, err := client.GetKeyForDevice(ctx, string(deviceID))
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+
+		key := reply.Key
 
 		if key == nil {
 			fmt.Println("IPNS key does not exist for device. Have backups for this device been enabled?")
@@ -145,7 +134,7 @@ var backupsPerformCmd = &cobra.Command{
 
 		// Add backup to IPFS
 		fmt.Println("Adding backup to IPFS...")
-		backupIpfsPath, err := addBackupToIpfs(ctx, ipfs, backupDir)
+		backupIpfsPath, err := client.AddBackup(ctx, backupDir)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -153,12 +142,12 @@ var backupsPerformCmd = &cobra.Command{
 		fmt.Printf("Added backup to IPFS (%s)\n", backupIpfsPath)
 
 		fmt.Println("Publishing latest backup path to IPNS...")
-		backupIpnsEntry, err := updateLatestBackupIpns(ctx, ipfs, backupIpfsPath, key)
+		backupIpnsEntry, err := client.UpdateLatestBackup(ctx, string(deviceID), backupIpfsPath.BackupPath)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Printf("Latest backup path published to IPNS (%s -> %s)\n", backupIpnsEntry.Name(), backupIpnsEntry.Value())
+		fmt.Printf("Latest backup path published to IPNS (%s -> %s)\n", backupIpnsEntry.Entry.Name, backupIpnsEntry.Entry.Value)
 	},
 }
 
@@ -189,44 +178,22 @@ var backupsListCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		repoPath := viper.GetString("repoPath")
-
-		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
-
-		// Spawn IPFS node
-		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
+		// Get all backups
+		backups, err := client.ListBackups(ctx)
 		if err != nil {
-			fmt.Println("Failed to spawn IPFS node:", err)
+			fmt.Printf("Failed to get backups: %s\n", err)
 			os.Exit(1)
 		}
 
-		// Get all IPNS keys
-		keys, err := ipfs.Key().List(ctx)
-		if err != nil {
-			fmt.Printf("Failed to get IPNS keys: %s\n", err)
-			os.Exit(1)
-		}
-
-		if len(keys) == 0 {
+		if len(backups.Backups) == 0 {
 			fmt.Println("No backups found.")
 			return
 		}
 
 		fmt.Println("Backups found:")
-		fmt.Println("[device-id]:\n\t [IPNS path] -> [IPFS path]\n")
-		for _, v := range keys {
-			if v.Name() != "self" {
-				path, err := ipfs.Name().Resolve(ctx, v.Path().String())
-				ipfsPath := "no backup found"
-				if err != nil {
-					ipfsPath = fmt.Sprintf("ERROR: %s", err)
-				}
-				if path != nil && path.String() != "" {
-					ipfsPath = path.String()
-				}
-
-				fmt.Printf("%s:\n\t %s -> %s\n", v.Name(), v.Path(), ipfsPath)
-			}
+		fmt.Printf("[device-id]:\n\t [IPNS path] -> [IPFS path]\n\n")
+		for _, v := range backups.Backups {
+			fmt.Printf("%s:\n\t %s -> %s\n", v.Key.Name, v.Key.Path, v.IpfsPath)
 		}
 	},
 }
@@ -237,79 +204,4 @@ func init() {
 	backupsCmd.AddCommand(backupsPerformCmd)
 	backupsCmd.AddCommand(backupsListCmd)
 	backupsCmd.AddCommand(backupsRestoreCmd)
-}
-
-func addBackupToIpfs(ctx context.Context, ipfs icore.CoreAPI, backupDir string) (path.Path, error) {
-	backupDirNode, err := getUnixfsNode(backupDir)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to find backup: %s", err)
-	}
-
-	opts := []options.UnixfsAddOption{
-		options.Unixfs.Nocopy(true),
-	}
-	cidDirectory, err := ipfs.Unixfs().Add(ctx, backupDirNode, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to add backup to IPFS: %s", err)
-	}
-
-	return cidDirectory, nil
-}
-
-func getIpnsKeyForDevice(ctx context.Context, ipfs icore.CoreAPI, deviceID idevice.DeviceID) (icore.Key, error) {
-	keys, err := ipfs.Key().List(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get IPNS keys: %s", err)
-	}
-
-	deviceIDRaw := string(deviceID)
-	for _, v := range keys {
-		if v.Name() == deviceIDRaw {
-			return v, nil
-		}
-	}
-
-	return nil, nil
-}
-
-func createBackupIpnsKey(ctx context.Context, ipfs icore.CoreAPI, deviceID idevice.DeviceID) (icore.Key, error) {
-	opts := []options.KeyGenerateOption{
-		options.Key.Size(2048),
-		options.Key.Type(options.RSAKey),
-	}
-
-	key, err := ipfs.Key().Generate(ctx, string(deviceID), opts...)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to generate IPNS key: %s", err)
-	}
-
-	return key, nil
-}
-
-func updateLatestBackupIpns(ctx context.Context, ipfs icore.CoreAPI, backupIpfsPath path.Path, key icore.Key) (icore.IpnsEntry, error) {
-	opts := []options.NamePublishOption{
-		options.Name.AllowOffline(true),
-		options.Name.Key(key.Name()),
-	}
-
-	ipnsEntry, err := ipfs.Name().Publish(ctx, backupIpfsPath, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to publish to IPNS: %s", err)
-	}
-
-	return ipnsEntry, nil
-}
-
-func getUnixfsNode(path string) (files.Node, error) {
-	st, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	f, err := files.NewSerialFile(path, false, st)
-	if err != nil {
-		return nil, err
-	}
-
-	return f, nil
 }
