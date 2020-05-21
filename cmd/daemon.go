@@ -171,7 +171,7 @@ func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string
 		fmt.Printf("Scheduled backup for device %s (%v)\n", deviceID, schedule.AllSettings())
 	}
 
-	s1.Start()
+	s1.StartAsync()
 
 	return nil
 }
