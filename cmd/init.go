@@ -47,26 +47,22 @@ var initCmd = &cobra.Command{
 
 		_, err := os.Stat(repoPath)
 		if err == nil {
-			fmt.Printf("repo already exists at %s\n", repoPath)
-			os.Exit(1)
+			log.Fatalf("repo already exists at %s\n", repoPath)
 		}
 
 		// Create repo
 		if err := checkWritable(repoPath); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		// Create backups dir
 		backupDir := filepath.Join(repoPath, "backups")
 		if err := checkWritable(backupDir); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		if err := initIpfsRepo(repoPath); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		fmt.Printf("Repo created at %s\n", repoPath)

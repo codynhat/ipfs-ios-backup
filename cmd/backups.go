@@ -24,7 +24,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/codynhat/ipfs-ios-backup/idevice"
@@ -52,8 +51,7 @@ var backupsEnableCmd = &cobra.Command{
 		// Pair device
 		fmt.Println("Pairing device...")
 		if err := idevice.PairDevice(deviceID); err != nil {
-			fmt.Println("Failed to pair device:", err)
-			os.Exit(1)
+			log.Fatalf("Failed to pair device: %v\n", err)
 		}
 		fmt.Println("Device is paired.")
 
@@ -61,15 +59,13 @@ var backupsEnableCmd = &cobra.Command{
 		fmt.Println("Determining if backup encryption is enabled...")
 		willEncrypt, err := idevice.GetDeviceWillEncrypt(deviceID)
 		if err != nil {
-			fmt.Println("Failed to determine if backup encryption is enabled:", err)
-			os.Exit(1)
+			log.Fatalf("Failed to determine if backup encryption is enabled: %v", err)
 		}
 
 		if !willEncrypt {
 			fmt.Println("Backup encryption is not enabled. Enabling...")
 			if err := idevice.EnableBackupEncryption(deviceID); err != nil {
-				fmt.Println("Failed to enable backup encryption:", err)
-				os.Exit(1)
+				log.Fatalf("Failed to enable backup encryption: %v", err)
 			}
 		}
 		fmt.Println("Backup encryption is enabled.")
@@ -77,8 +73,7 @@ var backupsEnableCmd = &cobra.Command{
 		// Create IPNS key
 		reply, err := client.GetKeyForDevice(ctx, string(deviceID))
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		key := reply.Key
@@ -88,8 +83,7 @@ var backupsEnableCmd = &cobra.Command{
 			reply, err := client.CreateKeyForDevice(ctx, string(deviceID))
 			key = reply.Key
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				log.Fatal(err)
 			}
 			fmt.Printf("Generated IPNS key (%s -> %s)\n", key.Name, key.Path)
 		} else {
@@ -112,8 +106,7 @@ var backupsPerformCmd = &cobra.Command{
 
 		err := performBackup(ctx, deviceID, repoPath)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 	},
 }
@@ -131,8 +124,7 @@ var backupsRestoreCmd = &cobra.Command{
 
 		// Restore backup
 		if err := idevice.RestoreBackup(deviceID, backupDir); err != nil {
-			fmt.Println("Failed to restore backup:", err)
-			os.Exit(1)
+			log.Fatalf("Failed to restore backup: %v", err)
 		}
 	},
 }
@@ -148,8 +140,7 @@ var backupsListCmd = &cobra.Command{
 		// Get all backups
 		backups, err := client.ListBackups(ctx)
 		if err != nil {
-			fmt.Printf("Failed to get backups: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Failed to get backups: %s\n", err)
 		}
 
 		if len(backups.Backups) == 0 {
@@ -174,7 +165,7 @@ func init() {
 }
 
 func performBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath string) error {
-	fmt.Printf("Performing backup for device %s...\n", deviceID)
+	log.Infof("Performing backup for device %s", deviceID)
 
 	backupDir := filepath.Join(repoPath, "backups")
 
@@ -196,19 +187,19 @@ func performBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath stri
 	}
 
 	// Add backup to IPFS
-	fmt.Println("Adding backup to IPFS...")
+	log.Infof("Adding backup to IPFS")
 	backupIpfsPath, err := client.AddBackup(ctx, backupDir)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Added backup to IPFS (%s)\n", backupIpfsPath)
+	log.Infof("Added backup to IPFS (%s)", backupIpfsPath)
 
-	fmt.Println("Publishing latest backup path to IPNS...")
+	log.Infof("Publishing latest backup path to IPNS")
 	backupIpnsEntry, err := client.UpdateLatestBackup(ctx, string(deviceID), backupIpfsPath.BackupPath)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Latest backup path published to IPNS (%s -> %s)\n", backupIpnsEntry.Entry.Name, backupIpnsEntry.Entry.Value)
+	log.Infof("Latest backup path published to IPNS (%s -> %s)", backupIpnsEntry.Entry.Name, backupIpnsEntry.Entry.Value)
 
 	return nil
 }

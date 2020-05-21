@@ -22,9 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
-	"os"
-
+	logging "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 
@@ -39,6 +37,7 @@ var (
 	cfgFile string
 	client  *api.Client
 	addr    ma.Multiaddr
+	log     = logging.Logger("ipfs-ios-backup")
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -54,27 +53,33 @@ var rootCmd = &cobra.Command{
 
 		addr, err = ma.NewMultiaddr(addrAPI)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		ptarget, err := TcpAddrFromMultiAddr(addr)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		client, err = api.NewClient(ptarget, opts...)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
+		}
+
+		if viper.GetBool("debug") {
+			if err := logging.SetLogLevel("ipfs-ios-backup", "debug"); err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			if err := logging.SetLogLevel("ipfs-ios-backup", "info"); err != nil {
+				log.Fatal(err)
+			}
 		}
 	},
 	PersistentPostRun: func(c *cobra.Command, args []string) {
 		if client != nil {
 			if err := client.Close(); err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				log.Fatal(err)
 			}
 		}
 	},
@@ -84,8 +89,7 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
@@ -94,8 +98,7 @@ func init() {
 
 	defaultRepoPath, err := homedir.Expand("~/.ipfs-ios-backup")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ipfs-ios-backup.json)")
@@ -104,6 +107,9 @@ func init() {
 
 	rootCmd.PersistentFlags().String("addrAPI", "/ip4/127.0.0.1/tcp/3006", "API endpoint")
 	viper.BindPFlag("addrAPI", rootCmd.PersistentFlags().Lookup("addrAPI"))
+
+	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
+	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -115,8 +121,7 @@ func initConfig() {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		viper.AddConfigPath(home)
@@ -127,6 +132,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Debugf("Using config file: %v", viper.ConfigFileUsed())
 	}
 }

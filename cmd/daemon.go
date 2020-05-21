@@ -61,27 +61,23 @@ var daemonCmd = &cobra.Command{
 		// Spawn IPFS node
 		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
 		if err != nil {
-			fmt.Println("Failed to spawn IPFS node:", err)
-			os.Exit(1)
+			log.Fatalf("Failed to spawn IPFS node: %v", err)
 		}
 
 		// Run schedules
 		err = startSchedules(ctx, viper.Sub("schedules"), repoPath)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		ptarget, err := TcpAddrFromMultiAddr(addr)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		lis, err := net.Listen("tcp", ptarget)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		service := api.NewService(ipfs)
@@ -168,7 +164,7 @@ func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string
 
 		s1.Every(uint64(periodInHours)).Hours().StartImmediately().Do(runScheduledBackup, ctx, deviceID, repoPath, minBatteryLevel, onlyWhenCharging)
 
-		fmt.Printf("Scheduled backup for device %s (%v)\n", deviceID, schedule.AllSettings())
+		log.Infof("Scheduled backup for device %s (%v)", deviceID, schedule.AllSettings())
 	}
 
 	s1.StartAsync()
@@ -177,40 +173,40 @@ func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string
 }
 
 func runScheduledBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath string, minBatteryLevel int, onlyWhenCharging bool) {
-	fmt.Printf("Backup triggered for device %s\n", deviceID)
-	fmt.Printf("onlyWhenCharging is %v\n", onlyWhenCharging)
+	log.Infof("Backup triggered for device %s", deviceID)
+	log.Infof("onlyWhenCharging is %v", onlyWhenCharging)
 
-	fmt.Println("Checking if device is on charger...")
+	log.Infof("Checking if device is on charger")
 
 	isCharging, err := idevice.GetDeviceBatteryIsCharging(deviceID)
 	if err != nil {
-		fmt.Printf("failed to check if device is charging: %s\n", err)
+		log.Errorf("failed to check if device is charging: %s", err)
 		return
 	}
 
 	if !isCharging {
 		if onlyWhenCharging {
-			fmt.Println("Device is not on charger. Skipping backup.")
+			log.Infof("Device is not on charger. Skipping backup.")
 			return
 		}
 
-		fmt.Printf("Checking if battery level >= %v%%...\n", minBatteryLevel)
+		log.Infof("Checking if battery level >= %v%%", minBatteryLevel)
 
 		currentBatteryLevel, err := idevice.GetDeviceBatteryCurrentCapacity(deviceID)
 		if err != nil {
-			fmt.Printf("failed to check device battery level: %s\n", err)
+			log.Errorf("failed to check device battery level: %s", err)
 			return
 		}
 
 		if int(currentBatteryLevel) < minBatteryLevel {
-			fmt.Printf("Device is not charged enough (%v%% < %v%%). Skipping backup.\n", currentBatteryLevel, minBatteryLevel)
+			log.Warnf("Device is not charged enough (%v%% < %v%%). Skipping backup.", currentBatteryLevel, minBatteryLevel)
 			return
 		}
 	}
 
 	err = performBackup(ctx, deviceID, repoPath)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		return
 	}
 }
