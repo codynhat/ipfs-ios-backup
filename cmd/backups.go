@@ -187,7 +187,7 @@ func performBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath stri
 	key := reply.Key
 
 	if key == nil {
-		return fmt.Errorf("IPNS key does not exist for device. Have backups for this device been enabled?")
+		return fmt.Errorf("IPNS key does not exist for device. Have backups for this device been enabled? See 'ipfs-ios-backup backups'")
 	}
 
 	// Perform backup

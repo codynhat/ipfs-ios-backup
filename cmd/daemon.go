@@ -151,10 +151,11 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string) error {
 	s1 := gocron.NewScheduler(time.UTC)
 
-	for rawDeviceID := range schedules.AllSettings() {
-		deviceID := idevice.DeviceID(rawDeviceID)
+	for name := range schedules.AllSettings() {
+		schedule := schedules.Sub(name)
 
-		schedule := schedules.Sub(rawDeviceID)
+		rawDeviceID := schedule.GetString("deviceID")
+		deviceID := idevice.DeviceID(rawDeviceID)
 		periodInHours := schedule.GetUint64("periodInHours")
 
 		onlyWhenCharging := false
@@ -175,7 +176,41 @@ func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string
 	return nil
 }
 
-func runScheduledBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath string, minBatteryLevel int, onlyWhenCharging bool) error {
+func runScheduledBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath string, minBatteryLevel int, onlyWhenCharging bool) {
 	fmt.Printf("Backup triggered for device %s\n", deviceID)
-	return performBackup(ctx, deviceID, repoPath)
+	fmt.Printf("onlyWhenCharging is %v\n", onlyWhenCharging)
+
+	fmt.Println("Checking if device is on charger...")
+
+	isCharging, err := idevice.GetDeviceBatteryIsCharging(deviceID)
+	if err != nil {
+		fmt.Printf("failed to check if device is charging: %s\n", err)
+		return
+	}
+
+	if !isCharging {
+		if onlyWhenCharging {
+			fmt.Println("Device is not on charger. Skipping backup.")
+			return
+		}
+
+		fmt.Printf("Checking if battery level >= %v%%...\n", minBatteryLevel)
+
+		currentBatteryLevel, err := idevice.GetDeviceBatteryCurrentCapacity(deviceID)
+		if err != nil {
+			fmt.Printf("failed to check device battery level: %s\n", err)
+			return
+		}
+
+		if int(currentBatteryLevel) < minBatteryLevel {
+			fmt.Printf("Device is not charged enough (%v%% < %v%%). Skipping backup.\n", currentBatteryLevel, minBatteryLevel)
+			return
+		}
+	}
+
+	err = performBackup(ctx, deviceID, repoPath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }

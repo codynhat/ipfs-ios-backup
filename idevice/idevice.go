@@ -118,51 +118,17 @@ func GetDeviceName(deviceID DeviceID) (string, error) {
 
 // GetDeviceWillEncrypt queries a device to see if encryption is enabled. See ideviceinfo cmd
 func GetDeviceWillEncrypt(deviceID DeviceID) (bool, error) {
-	var device C.idevice_t
-	var client C.lockdownd_client_t
-	var node C.plist_t
+	return getDeviceInfoBool(deviceID, "com.apple.mobile.backup", "WillEncrypt")
+}
 
-	var cDeviceID *C.char = C.CString(string(deviceID))
-	defer C.free(unsafe.Pointer(cDeviceID))
+// GetDeviceBatteryIsCharging queries a device to see if the battery is charging. See ideviceinfo cmd
+func GetDeviceBatteryIsCharging(deviceID DeviceID) (bool, error) {
+	return getDeviceInfoBool(deviceID, "com.apple.mobile.battery", "BatteryIsCharging")
+}
 
-	err := C.idevice_new_with_options(&device, cDeviceID, C.IDEVICE_LOOKUP_USBMUX|C.IDEVICE_LOOKUP_NETWORK)
-	defer C.idevice_free(device)
-	if err < 0 {
-		return false, errors.New("Failed to retrieve device name (idevice_new_with_options)")
-	}
-
-	if device == nil {
-		return false, fmt.Errorf("No device with UDID (%s) is connected", deviceID)
-	}
-
-	var cLabel *C.char = C.CString("ipfs-ios-backup")
-	defer C.free(unsafe.Pointer(cLabel))
-	err1 := C.lockdownd_client_new_with_handshake(device, &client, cLabel)
-	defer C.lockdownd_client_free(client)
-	if err1 != C.LOCKDOWN_E_SUCCESS {
-		return false, fmt.Errorf("Failed to connect to device (%s)", deviceID)
-	}
-
-	var cDomain *C.char = C.CString("com.apple.mobile.backup")
-	defer C.free(unsafe.Pointer(cDomain))
-
-	var cValue *C.char = C.CString("WillEncrypt")
-	defer C.free(unsafe.Pointer(cValue))
-
-	err1 = C.lockdownd_get_value(client, cDomain, cValue, &node)
-	if err1 != C.LOCKDOWN_E_SUCCESS {
-		return false, fmt.Errorf("Failed to get lockdownd value (%s)", deviceID)
-	}
-
-	var b C.uint8_t
-	C.plist_get_bool_val(node, &b)
-
-	if uint8(b) > 0 {
-		return true, nil
-	} else {
-		return false, nil
-	}
-
+// GetDeviceBatteryCurrentCapacity queries a device to get the current battery capacity percentage. See ideviceinfo cmd
+func GetDeviceBatteryCurrentCapacity(deviceID DeviceID) (uint64, error) {
+	return getDeviceInfoUInt64(deviceID, "com.apple.mobile.battery", "BatteryCurrentCapacity")
 }
 
 // PairDevice will attempt to pair a device with this computer, or do nothing if already paired
@@ -259,4 +225,94 @@ func EnableBackupEncryption(deviceID DeviceID) error {
 	}
 
 	return nil
+}
+
+func getDeviceInfoBool(deviceID DeviceID, domain string, value string) (bool, error) {
+	var device C.idevice_t
+	var client C.lockdownd_client_t
+	var node C.plist_t
+
+	var cDeviceID *C.char = C.CString(string(deviceID))
+	defer C.free(unsafe.Pointer(cDeviceID))
+
+	err := C.idevice_new_with_options(&device, cDeviceID, C.IDEVICE_LOOKUP_USBMUX|C.IDEVICE_LOOKUP_NETWORK)
+	defer C.idevice_free(device)
+	if err < 0 {
+		return false, errors.New("Failed to retrieve device name (idevice_new_with_options)")
+	}
+
+	if device == nil {
+		return false, fmt.Errorf("No device with UDID (%s) is connected", deviceID)
+	}
+
+	var cLabel *C.char = C.CString("ipfs-ios-backup")
+	defer C.free(unsafe.Pointer(cLabel))
+	err1 := C.lockdownd_client_new_with_handshake(device, &client, cLabel)
+	defer C.lockdownd_client_free(client)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return false, fmt.Errorf("Failed to connect to device (%s)", deviceID)
+	}
+
+	var cDomain *C.char = C.CString(domain)
+	defer C.free(unsafe.Pointer(cDomain))
+
+	var cValue *C.char = C.CString(value)
+	defer C.free(unsafe.Pointer(cValue))
+
+	err1 = C.lockdownd_get_value(client, cDomain, cValue, &node)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return false, fmt.Errorf("Failed to get lockdownd value (%s)", deviceID)
+	}
+
+	var b C.uint8_t
+	C.plist_get_bool_val(node, &b)
+
+	if uint8(b) > 0 {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+func getDeviceInfoUInt64(deviceID DeviceID, domain string, value string) (uint64, error) {
+	var device C.idevice_t
+	var client C.lockdownd_client_t
+	var node C.plist_t
+
+	var cDeviceID *C.char = C.CString(string(deviceID))
+	defer C.free(unsafe.Pointer(cDeviceID))
+
+	err := C.idevice_new_with_options(&device, cDeviceID, C.IDEVICE_LOOKUP_USBMUX|C.IDEVICE_LOOKUP_NETWORK)
+	defer C.idevice_free(device)
+	if err < 0 {
+		return 0, errors.New("Failed to retrieve device name (idevice_new_with_options)")
+	}
+
+	if device == nil {
+		return 0, fmt.Errorf("No device with UDID (%s) is connected", deviceID)
+	}
+
+	var cLabel *C.char = C.CString("ipfs-ios-backup")
+	defer C.free(unsafe.Pointer(cLabel))
+	err1 := C.lockdownd_client_new_with_handshake(device, &client, cLabel)
+	defer C.lockdownd_client_free(client)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return 0, fmt.Errorf("Failed to connect to device (%s)", deviceID)
+	}
+
+	var cDomain *C.char = C.CString(domain)
+	defer C.free(unsafe.Pointer(cDomain))
+
+	var cValue *C.char = C.CString(value)
+	defer C.free(unsafe.Pointer(cValue))
+
+	err1 = C.lockdownd_get_value(client, cDomain, cValue, &node)
+	if err1 != C.LOCKDOWN_E_SUCCESS {
+		return 0, fmt.Errorf("Failed to get lockdownd value (%s)", deviceID)
+	}
+
+	var u C.uint64_t
+	C.plist_get_uint_val(node, &u)
+
+	return uint64(u), nil
 }
