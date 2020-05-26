@@ -68,11 +68,48 @@ or set `repoPath` in the configuration file at `$HOME/.ipfs-ios-backup.json`.
 }
 ```
 
+## Schedule Automatic Backups
+
+Backups can be automatically performed in the background by the daemon. This can be enabled in the configuration (default is $HOME/.ipfs-ios-backup.json).
+
+``` json
+{
+  "schedules": {
+    "{DEVICE_NAME}": {
+      "deviceID": "{DEVICE_ID}",
+      "periodInHours": 6,
+      "minBatteryLevel": 50
+    }
+  }
+}
+```
+
+Where `{DEVICE_NAME}` and `{DEVICE_ID}` are the name and ID of the device you want to backup, respectively. See [finding devices](#finding-devices) for how to find the device ID.
+
+Each schedule has the following parameters:
+
+| Option | Description |
+| ------ | ----------- |
+| periodInHours | How many hours should pass between backups |
+| minBatteryLevel | The minimum battery level required to perform a backup when a device is not charging |
+
+Notes:
+- If a device is connected to a charger, `minBatteryLevel` is ignored
+- It is common for a device to not always be detected on WiFi. Therefore, the `periodInHours` is a best-effort and is not guaranteed
+
 ## Run the daemon
-Interacting with backups requires the daemon to be running
+Interacting with and performing scheduled backups requires the daemon to be running
 ``` sh
 ipfs-ios-desktop daemon
 ```
+
+## brew service (macOS launchd)
+If installed via [Homebrew](#homebrew), the daemon can be started automatically at launch.
+``` sh
+brew services start ipfs-ios-backup
+```
+
+Logs can be found at `${HOMEBREW_PREFIX}/var/log/ipfs-ios-backup.log`
 
 ## Finding devices
 
@@ -122,7 +159,6 @@ A current limitation exists that prevents `ipfs-ios-backup` daemon from running 
 
 # Roadmap
 
-- Automatic backups performed by a daemon
 - Encryption of metadata
 - Integration with pinning services
 
