@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 
 	"github.com/codynhat/ipfs-ios-backup/idevice"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -126,9 +127,9 @@ var backupsListCmd = &cobra.Command{
 		}
 
 		fmt.Println("Backups found:")
-		fmt.Printf("[device-id]:\n\t [IPNS path] -> [IPFS path]\n\n")
+		fmt.Printf("[device-id] -> [IPFS cid]\n\n")
 		for _, v := range backups.Backups {
-			fmt.Printf("%s -> %s\n\tLast Updated: %v\n", v.DeviceID, v.BackupCid, v.UpdatedAt)
+			fmt.Printf("%s -> %s\n\tLast Backup At: %v\n", v.DeviceID, v.BackupCid, ptypes.TimestampString(v.UpdatedAt))
 		}
 	},
 }
@@ -159,7 +160,7 @@ func performBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath stri
 	}
 	log.Infof("Added backup to IPFS (%s)", reply.BackupCid)
 
-	log.Infof("Publishing latest backup path to IPNS")
+	log.Infof("Updating latest backup CID")
 	updateReply, err := client.UpdateLatestBackup(ctx, string(deviceID), reply.BackupCid)
 	if err != nil {
 		return err

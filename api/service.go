@@ -60,9 +60,21 @@ func (s *Service) UpdateLatestBackup(ctx context.Context, req *pb.UpdateLatestBa
 		UpdatedAt:       time.Now(),
 	}
 
-	err := s.backupCollection.Save(util.JSONFromInstance(backup))
+	backupExists, err := s.backupExistsForDevice(deviceID)
 	if err != nil {
 		return nil, err
+	}
+
+	if backupExists {
+		err := s.backupCollection.Save(util.JSONFromInstance(backup))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_, err := s.backupCollection.Create(util.JSONFromInstance(backup))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	t, err := ptypes.TimestampProto(backup.UpdatedAt)
@@ -124,6 +136,15 @@ func (s *Service) addBackupToIpfs(ctx context.Context, backupDir string) (cid.Ci
 	}
 
 	return cidDirectory.Cid(), nil
+}
+
+func (s *Service) backupExistsForDevice(deviceID idevice.DeviceID) (bool, error) {
+	backups, err := s.backupCollection.Find(db.Where("DeviceID").Eq(string(deviceID)))
+	if err != nil {
+		return false, err
+	}
+
+	return len(backups) > 0, nil
 }
 
 func getUnixfsNode(path string) (files.Node, error) {
