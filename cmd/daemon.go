@@ -41,6 +41,10 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/textileio/go-threads/common"
+	"github.com/textileio/go-threads/core/thread"
+	"github.com/textileio/go-threads/db"
+	"github.com/textileio/go-threads/util"
 	"google.golang.org/grpc"
 )
 
@@ -64,6 +68,19 @@ var daemonCmd = &cobra.Command{
 			log.Fatalf("Failed to spawn IPFS node: %v", err)
 		}
 
+		// Load backup collection
+		rawThreadID := viper.GetString("threadID")
+		threadID, err := thread.Decode(rawThreadID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		collection, clean, err := loadBackupCollection(repoPath, threadID, viper.GetBool("debug"))
+		defer clean()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		// Run schedules
 		err = startSchedules(ctx, viper.Sub("schedules"), repoPath)
 		if err != nil {
@@ -80,7 +97,10 @@ var daemonCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		service := api.NewService(ipfs)
+		service, err := api.NewService(ipfs, collection)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		grpcServer := grpc.NewServer()
 		pb.RegisterAPIServer(grpcServer, service)
@@ -130,8 +150,8 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 
 	// Construct the node
 	nodeOptions := &core.BuildCfg{
-		Online:  false,
-		Routing: libp2p.NilRouterOption,
+		Online:  true,
+		Routing: libp2p.DHTOption,
 		Repo:    repo,
 	}
 
@@ -142,6 +162,23 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 
 	// Attach the Core API to the constructed node
 	return coreapi.NewCoreAPI(node)
+}
+
+func loadBackupCollection(repoRoot string, threadID thread.ID, debug bool) (*db.Collection, func(), error) {
+	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(debug), common.WithNetHostAddr(util.FreeLocalAddr()))
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	d, err := db.NewDB(context.Background(), net, threadID, db.WithNewDBRepoPath(repoRoot))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	collection := d.GetCollection("Backup")
+
+	return collection, func() { d.Close() }, nil
 }
 
 func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string) error {

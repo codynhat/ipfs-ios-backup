@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -29,11 +30,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/codynhat/ipfs-ios-backup/api"
 	config "github.com/ipfs/go-ipfs-config"
 	"github.com/ipfs/go-ipfs/plugin/loader"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/textileio/go-threads/common"
+	"github.com/textileio/go-threads/core/thread"
+	"github.com/textileio/go-threads/db"
+	"github.com/textileio/go-threads/util"
 )
 
 // initCmd represents the init command
@@ -65,7 +71,21 @@ var initCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+		threadID, clean, err := initThreadsRepo(repoPath)
+		defer clean()
+		if err != nil {
+			log.Fatalf("Could not initialize threads repo: %s", err)
+		}
+
+		fmt.Printf("Created thread %s\n", threadID)
 		fmt.Printf("Repo created at %s\n", repoPath)
+
+		viper.Set("threadID", threadID)
+		if err = viper.WriteConfig(); err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf("Saved config to %s\n", viper.ConfigFileUsed())
 	},
 }
 
@@ -181,4 +201,28 @@ func createSwarmKey(ipfsRepoRoot string) error {
 	}
 
 	return nil
+}
+
+func initThreadsRepo(repoRoot string) (thread.ID, func(), error) {
+	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(true), common.WithNetHostAddr(util.FreeLocalAddr()))
+	if err != nil {
+		return thread.Undef, nil, err
+	}
+
+	id := thread.NewIDV1(thread.Raw, 32)
+	d, err := db.NewDB(context.Background(), net, id, db.WithNewDBRepoPath(repoRoot))
+	if err != nil {
+		return thread.Undef, nil, err
+	}
+
+	_, err = d.NewCollection(db.CollectionConfig{
+		Name:   "Backup",
+		Schema: util.SchemaFromInstance(&api.Backup{}, false),
+	})
+
+	if err != nil {
+		return thread.Undef, func() { d.Close() }, err
+	}
+
+	return id, func() { d.Close() }, nil
 }

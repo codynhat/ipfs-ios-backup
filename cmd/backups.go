@@ -45,9 +45,6 @@ var backupsEnableCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		deviceID := idevice.DeviceID(args[0])
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
 		// Pair device
 		fmt.Println("Pairing device...")
 		if err := idevice.PairDevice(deviceID); err != nil {
@@ -69,26 +66,6 @@ var backupsEnableCmd = &cobra.Command{
 			}
 		}
 		fmt.Println("Backup encryption is enabled.")
-
-		// Create IPNS key
-		reply, err := client.GetKeyForDevice(ctx, string(deviceID))
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		key := reply.Key
-
-		if key == nil {
-			fmt.Println("Generating IPNS key...")
-			reply, err := client.CreateKeyForDevice(ctx, string(deviceID))
-			key = reply.Key
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Printf("Generated IPNS key (%s -> %s)\n", key.Name, key.Path)
-		} else {
-			fmt.Printf("IPNS key exists (%s -> %s)\n", key.Name, key.Path)
-		}
 	},
 }
 
@@ -151,7 +128,7 @@ var backupsListCmd = &cobra.Command{
 		fmt.Println("Backups found:")
 		fmt.Printf("[device-id]:\n\t [IPNS path] -> [IPFS path]\n\n")
 		for _, v := range backups.Backups {
-			fmt.Printf("%s:\n\t %s -> %s\n", v.Key.Name, v.Key.Path, v.IpfsPath)
+			fmt.Printf("%s -> %s\n\tLast Updated: %v\n", v.DeviceID, v.BackupCid, v.UpdatedAt)
 		}
 	},
 }
@@ -169,37 +146,25 @@ func performBackup(ctx context.Context, deviceID idevice.DeviceID, repoPath stri
 
 	backupDir := filepath.Join(repoPath, "backups")
 
-	// Get IPNS key
-	reply, err := client.GetKeyForDevice(ctx, string(deviceID))
-	if err != nil {
-		return err
-	}
-
-	key := reply.Key
-
-	if key == nil {
-		return fmt.Errorf("IPNS key does not exist for device. Have backups for this device been enabled? See 'ipfs-ios-backup backups'")
-	}
-
 	// Perform backup
-	if err = idevice.PerformBackup(deviceID, backupDir); err != nil {
+	if err := idevice.PerformBackup(deviceID, backupDir); err != nil {
 		return fmt.Errorf("failed to perform backup: %s", err)
 	}
 
 	// Add backup to IPFS
 	log.Infof("Adding backup to IPFS")
-	backupIpfsPath, err := client.AddBackup(ctx, backupDir)
+	reply, err := client.AddBackup(ctx, backupDir)
 	if err != nil {
 		return err
 	}
-	log.Infof("Added backup to IPFS (%s)", backupIpfsPath)
+	log.Infof("Added backup to IPFS (%s)", reply.BackupCid)
 
 	log.Infof("Publishing latest backup path to IPNS")
-	backupIpnsEntry, err := client.UpdateLatestBackup(ctx, string(deviceID), backupIpfsPath.BackupPath)
+	updateReply, err := client.UpdateLatestBackup(ctx, string(deviceID), reply.BackupCid)
 	if err != nil {
 		return err
 	}
-	log.Infof("Latest backup path published to IPNS (%s -> %s)", backupIpnsEntry.Entry.Name, backupIpnsEntry.Entry.Value)
+	log.Infof("Latest backup cid saved (%s)", updateReply.Backup.BackupCid)
 
 	return nil
 }

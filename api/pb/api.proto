@@ -1,26 +1,12 @@
 syntax = "proto3";
 
 package api.pb;
+import "google/protobuf/timestamp.proto";
 
-message Key {
-    string name = 1;
-    string path = 2;
-}
-
-message GetKeyForDeviceRequest {
+message Backup {
     string deviceID = 1;
-}
-
-message GetKeyForDeviceReply {
-    Key key = 1;
-}
-
-message CreateKeyForDeviceRequest {
-    string deviceID = 1;
-}
-
-message CreateKeyForDeviceReply {
-    Key key = 1;
+    string backupCid = 2;
+    google.protobuf.Timestamp updatedAt = 3;
 }
 
 message AddBackupRequest {
@@ -28,37 +14,25 @@ message AddBackupRequest {
 }
 
 message AddBackupReply {
-    string backupPath = 1;
+    string backupCid = 1;
 }
 
 message UpdateLatestBackupRequest {
     string deviceID = 1;
-    string backupPath = 2;
+    string backupCid = 2;
 }
 
 message UpdateLatestBackupReply {
-    Entry entry = 1;
-
-    message Entry {
-        string name = 1;
-        string value = 2;
-    }
+    Backup backup = 1;
 }
 
 message ListBackupsRequest {}
 
 message ListBackupsReply {
     repeated Backup backups = 1;
-
-    message Backup {
-        Key key = 1;
-        string ipfsPath = 2;
-    }
 }
 
 service API {
-    rpc GetKeyForDevice(GetKeyForDeviceRequest) returns (GetKeyForDeviceReply) {}
-    rpc CreateKeyForDevice(CreateKeyForDeviceRequest) returns (CreateKeyForDeviceReply) {}
     rpc AddBackup(AddBackupRequest) returns (AddBackupReply) {}
     rpc UpdateLatestBackup(UpdateLatestBackupRequest) returns (UpdateLatestBackupReply) {}
     rpc ListBackups(ListBackupsRequest) returns (ListBackupsReply) {}

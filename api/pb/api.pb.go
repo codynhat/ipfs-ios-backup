@@ -9,6 +9,7 @@ package api_pb
 import (
 	context "context"
 	proto "github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -29,17 +30,18 @@ const (
 // of the legacy proto package is being used.
 const _ = proto.ProtoPackageIsVersion4
 
-type Key struct {
+type Backup struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Path string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	DeviceID  string               `protobuf:"bytes,1,opt,name=deviceID,proto3" json:"deviceID,omitempty"`
+	BackupCid string               `protobuf:"bytes,2,opt,name=backupCid,proto3" json:"backupCid,omitempty"`
+	UpdatedAt *timestamp.Timestamp `protobuf:"bytes,3,opt,name=updatedAt,proto3" json:"updatedAt,omitempty"`
 }
 
-func (x *Key) Reset() {
-	*x = Key{}
+func (x *Backup) Reset() {
+	*x = Backup{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_api_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -47,13 +49,13 @@ func (x *Key) Reset() {
 	}
 }
 
-func (x *Key) String() string {
+func (x *Backup) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Key) ProtoMessage() {}
+func (*Backup) ProtoMessage() {}
 
-func (x *Key) ProtoReflect() protoreflect.Message {
+func (x *Backup) ProtoReflect() protoreflect.Message {
 	mi := &file_api_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -65,209 +67,28 @@ func (x *Key) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Key.ProtoReflect.Descriptor instead.
-func (*Key) Descriptor() ([]byte, []int) {
+// Deprecated: Use Backup.ProtoReflect.Descriptor instead.
+func (*Backup) Descriptor() ([]byte, []int) {
 	return file_api_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Key) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *Key) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
-type GetKeyForDeviceRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	DeviceID string `protobuf:"bytes,1,opt,name=deviceID,proto3" json:"deviceID,omitempty"`
-}
-
-func (x *GetKeyForDeviceRequest) Reset() {
-	*x = GetKeyForDeviceRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[1]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *GetKeyForDeviceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetKeyForDeviceRequest) ProtoMessage() {}
-
-func (x *GetKeyForDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[1]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetKeyForDeviceRequest.ProtoReflect.Descriptor instead.
-func (*GetKeyForDeviceRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *GetKeyForDeviceRequest) GetDeviceID() string {
+func (x *Backup) GetDeviceID() string {
 	if x != nil {
 		return x.DeviceID
 	}
 	return ""
 }
 
-type GetKeyForDeviceReply struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Key *Key `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-}
-
-func (x *GetKeyForDeviceReply) Reset() {
-	*x = GetKeyForDeviceReply{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *GetKeyForDeviceReply) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetKeyForDeviceReply) ProtoMessage() {}
-
-func (x *GetKeyForDeviceReply) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetKeyForDeviceReply.ProtoReflect.Descriptor instead.
-func (*GetKeyForDeviceReply) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *GetKeyForDeviceReply) GetKey() *Key {
+func (x *Backup) GetBackupCid() string {
 	if x != nil {
-		return x.Key
-	}
-	return nil
-}
-
-type CreateKeyForDeviceRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	DeviceID string `protobuf:"bytes,1,opt,name=deviceID,proto3" json:"deviceID,omitempty"`
-}
-
-func (x *CreateKeyForDeviceRequest) Reset() {
-	*x = CreateKeyForDeviceRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[3]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *CreateKeyForDeviceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateKeyForDeviceRequest) ProtoMessage() {}
-
-func (x *CreateKeyForDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[3]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateKeyForDeviceRequest.ProtoReflect.Descriptor instead.
-func (*CreateKeyForDeviceRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *CreateKeyForDeviceRequest) GetDeviceID() string {
-	if x != nil {
-		return x.DeviceID
+		return x.BackupCid
 	}
 	return ""
 }
 
-type CreateKeyForDeviceReply struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Key *Key `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-}
-
-func (x *CreateKeyForDeviceReply) Reset() {
-	*x = CreateKeyForDeviceReply{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[4]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *CreateKeyForDeviceReply) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateKeyForDeviceReply) ProtoMessage() {}
-
-func (x *CreateKeyForDeviceReply) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[4]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateKeyForDeviceReply.ProtoReflect.Descriptor instead.
-func (*CreateKeyForDeviceReply) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *CreateKeyForDeviceReply) GetKey() *Key {
+func (x *Backup) GetUpdatedAt() *timestamp.Timestamp {
 	if x != nil {
-		return x.Key
+		return x.UpdatedAt
 	}
 	return nil
 }
@@ -283,7 +104,7 @@ type AddBackupRequest struct {
 func (x *AddBackupRequest) Reset() {
 	*x = AddBackupRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[5]
+		mi := &file_api_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -296,7 +117,7 @@ func (x *AddBackupRequest) String() string {
 func (*AddBackupRequest) ProtoMessage() {}
 
 func (x *AddBackupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[5]
+	mi := &file_api_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -309,7 +130,7 @@ func (x *AddBackupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddBackupRequest.ProtoReflect.Descriptor instead.
 func (*AddBackupRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{5}
+	return file_api_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *AddBackupRequest) GetBackupDir() string {
@@ -324,13 +145,13 @@ type AddBackupReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BackupPath string `protobuf:"bytes,1,opt,name=backupPath,proto3" json:"backupPath,omitempty"`
+	BackupCid string `protobuf:"bytes,1,opt,name=backupCid,proto3" json:"backupCid,omitempty"`
 }
 
 func (x *AddBackupReply) Reset() {
 	*x = AddBackupReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[6]
+		mi := &file_api_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -343,7 +164,7 @@ func (x *AddBackupReply) String() string {
 func (*AddBackupReply) ProtoMessage() {}
 
 func (x *AddBackupReply) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[6]
+	mi := &file_api_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,12 +177,12 @@ func (x *AddBackupReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddBackupReply.ProtoReflect.Descriptor instead.
 func (*AddBackupReply) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{6}
+	return file_api_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *AddBackupReply) GetBackupPath() string {
+func (x *AddBackupReply) GetBackupCid() string {
 	if x != nil {
-		return x.BackupPath
+		return x.BackupCid
 	}
 	return ""
 }
@@ -371,14 +192,14 @@ type UpdateLatestBackupRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	DeviceID   string `protobuf:"bytes,1,opt,name=deviceID,proto3" json:"deviceID,omitempty"`
-	BackupPath string `protobuf:"bytes,2,opt,name=backupPath,proto3" json:"backupPath,omitempty"`
+	DeviceID  string `protobuf:"bytes,1,opt,name=deviceID,proto3" json:"deviceID,omitempty"`
+	BackupCid string `protobuf:"bytes,2,opt,name=backupCid,proto3" json:"backupCid,omitempty"`
 }
 
 func (x *UpdateLatestBackupRequest) Reset() {
 	*x = UpdateLatestBackupRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[7]
+		mi := &file_api_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -391,7 +212,7 @@ func (x *UpdateLatestBackupRequest) String() string {
 func (*UpdateLatestBackupRequest) ProtoMessage() {}
 
 func (x *UpdateLatestBackupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[7]
+	mi := &file_api_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,7 +225,7 @@ func (x *UpdateLatestBackupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateLatestBackupRequest.ProtoReflect.Descriptor instead.
 func (*UpdateLatestBackupRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{7}
+	return file_api_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *UpdateLatestBackupRequest) GetDeviceID() string {
@@ -414,9 +235,9 @@ func (x *UpdateLatestBackupRequest) GetDeviceID() string {
 	return ""
 }
 
-func (x *UpdateLatestBackupRequest) GetBackupPath() string {
+func (x *UpdateLatestBackupRequest) GetBackupCid() string {
 	if x != nil {
-		return x.BackupPath
+		return x.BackupCid
 	}
 	return ""
 }
@@ -426,13 +247,13 @@ type UpdateLatestBackupReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Entry *UpdateLatestBackupReply_Entry `protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
+	Backup *Backup `protobuf:"bytes,1,opt,name=backup,proto3" json:"backup,omitempty"`
 }
 
 func (x *UpdateLatestBackupReply) Reset() {
 	*x = UpdateLatestBackupReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[8]
+		mi := &file_api_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -445,7 +266,7 @@ func (x *UpdateLatestBackupReply) String() string {
 func (*UpdateLatestBackupReply) ProtoMessage() {}
 
 func (x *UpdateLatestBackupReply) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[8]
+	mi := &file_api_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -458,12 +279,12 @@ func (x *UpdateLatestBackupReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateLatestBackupReply.ProtoReflect.Descriptor instead.
 func (*UpdateLatestBackupReply) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{8}
+	return file_api_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *UpdateLatestBackupReply) GetEntry() *UpdateLatestBackupReply_Entry {
+func (x *UpdateLatestBackupReply) GetBackup() *Backup {
 	if x != nil {
-		return x.Entry
+		return x.Backup
 	}
 	return nil
 }
@@ -477,7 +298,7 @@ type ListBackupsRequest struct {
 func (x *ListBackupsRequest) Reset() {
 	*x = ListBackupsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[9]
+		mi := &file_api_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -490,7 +311,7 @@ func (x *ListBackupsRequest) String() string {
 func (*ListBackupsRequest) ProtoMessage() {}
 
 func (x *ListBackupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[9]
+	mi := &file_api_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -503,7 +324,7 @@ func (x *ListBackupsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBackupsRequest.ProtoReflect.Descriptor instead.
 func (*ListBackupsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{9}
+	return file_api_proto_rawDescGZIP(), []int{5}
 }
 
 type ListBackupsReply struct {
@@ -511,13 +332,13 @@ type ListBackupsReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Backups []*ListBackupsReply_Backup `protobuf:"bytes,1,rep,name=backups,proto3" json:"backups,omitempty"`
+	Backups []*Backup `protobuf:"bytes,1,rep,name=backups,proto3" json:"backups,omitempty"`
 }
 
 func (x *ListBackupsReply) Reset() {
 	*x = ListBackupsReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[10]
+		mi := &file_api_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -530,7 +351,7 @@ func (x *ListBackupsReply) String() string {
 func (*ListBackupsReply) ProtoMessage() {}
 
 func (x *ListBackupsReply) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[10]
+	mi := &file_api_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -543,205 +364,67 @@ func (x *ListBackupsReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBackupsReply.ProtoReflect.Descriptor instead.
 func (*ListBackupsReply) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{10}
+	return file_api_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *ListBackupsReply) GetBackups() []*ListBackupsReply_Backup {
+func (x *ListBackupsReply) GetBackups() []*Backup {
 	if x != nil {
 		return x.Backups
 	}
 	return nil
 }
 
-type UpdateLatestBackupReply_Entry struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Name  string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-}
-
-func (x *UpdateLatestBackupReply_Entry) Reset() {
-	*x = UpdateLatestBackupReply_Entry{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[11]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *UpdateLatestBackupReply_Entry) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateLatestBackupReply_Entry) ProtoMessage() {}
-
-func (x *UpdateLatestBackupReply_Entry) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[11]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateLatestBackupReply_Entry.ProtoReflect.Descriptor instead.
-func (*UpdateLatestBackupReply_Entry) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{8, 0}
-}
-
-func (x *UpdateLatestBackupReply_Entry) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *UpdateLatestBackupReply_Entry) GetValue() string {
-	if x != nil {
-		return x.Value
-	}
-	return ""
-}
-
-type ListBackupsReply_Backup struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Key      *Key   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	IpfsPath string `protobuf:"bytes,2,opt,name=ipfsPath,proto3" json:"ipfsPath,omitempty"`
-}
-
-func (x *ListBackupsReply_Backup) Reset() {
-	*x = ListBackupsReply_Backup{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[12]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ListBackupsReply_Backup) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListBackupsReply_Backup) ProtoMessage() {}
-
-func (x *ListBackupsReply_Backup) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[12]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListBackupsReply_Backup.ProtoReflect.Descriptor instead.
-func (*ListBackupsReply_Backup) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{10, 0}
-}
-
-func (x *ListBackupsReply_Backup) GetKey() *Key {
-	if x != nil {
-		return x.Key
-	}
-	return nil
-}
-
-func (x *ListBackupsReply_Backup) GetIpfsPath() string {
-	if x != nil {
-		return x.IpfsPath
-	}
-	return ""
-}
-
 var File_api_proto protoreflect.FileDescriptor
 
 var file_api_proto_rawDesc = []byte{
 	0x0a, 0x09, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x06, 0x61, 0x70, 0x69,
-	0x2e, 0x70, 0x62, 0x22, 0x2d, 0x0a, 0x03, 0x4b, 0x65, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61,
-	0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x12,
-	0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61,
-	0x74, 0x68, 0x22, 0x34, 0x0a, 0x16, 0x47, 0x65, 0x74, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44,
-	0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08,
-	0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
-	0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x22, 0x35, 0x0a, 0x14, 0x47, 0x65, 0x74, 0x4b,
-	0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79,
-	0x12, 0x1d, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0b, 0x2e,
-	0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x4b, 0x65, 0x79, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x22,
-	0x37, 0x0a, 0x19, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44,
-	0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08,
-	0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
-	0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x22, 0x38, 0x0a, 0x17, 0x43, 0x72, 0x65, 0x61,
-	0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65,
-	0x70, 0x6c, 0x79, 0x12, 0x1d, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x0b, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x4b, 0x65, 0x79, 0x52, 0x03, 0x6b,
-	0x65, 0x79, 0x22, 0x30, 0x0a, 0x10, 0x41, 0x64, 0x64, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52,
+	0x2e, 0x70, 0x62, 0x1a, 0x1f, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x62, 0x75, 0x66, 0x2f, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x2e, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x22, 0x7c, 0x0a, 0x06, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x12, 0x1a,
+	0x0a, 0x08, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x08, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x12, 0x1c, 0x0a, 0x09, 0x62, 0x61,
+	0x63, 0x6b, 0x75, 0x70, 0x43, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x62,
+	0x61, 0x63, 0x6b, 0x75, 0x70, 0x43, 0x69, 0x64, 0x12, 0x38, 0x0a, 0x09, 0x75, 0x70, 0x64, 0x61,
+	0x74, 0x65, 0x64, 0x41, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f,
+	0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69,
+	0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x09, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64,
+	0x41, 0x74, 0x22, 0x30, 0x0a, 0x10, 0x41, 0x64, 0x64, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52,
 	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70,
 	0x44, 0x69, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x62, 0x61, 0x63, 0x6b, 0x75,
-	0x70, 0x44, 0x69, 0x72, 0x22, 0x30, 0x0a, 0x0e, 0x41, 0x64, 0x64, 0x42, 0x61, 0x63, 0x6b, 0x75,
-	0x70, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x1e, 0x0a, 0x0a, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70,
-	0x50, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x62, 0x61, 0x63, 0x6b,
-	0x75, 0x70, 0x50, 0x61, 0x74, 0x68, 0x22, 0x57, 0x0a, 0x19, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
-	0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x12,
-	0x1e, 0x0a, 0x0a, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x50, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x0a, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x50, 0x61, 0x74, 0x68, 0x22,
-	0x89, 0x01, 0x0a, 0x17, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74,
-	0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x3b, 0x0a, 0x05, 0x65,
-	0x6e, 0x74, 0x72, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x61, 0x70, 0x69,
-	0x2e, 0x70, 0x62, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74,
-	0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x2e, 0x45, 0x6e, 0x74, 0x72,
-	0x79, 0x52, 0x05, 0x65, 0x6e, 0x74, 0x72, 0x79, 0x1a, 0x31, 0x0a, 0x05, 0x45, 0x6e, 0x74, 0x72,
-	0x79, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x14, 0x0a, 0x12, 0x4c,
-	0x69, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x22, 0x92, 0x01, 0x0a, 0x10, 0x4c, 0x69, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70,
-	0x73, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x39, 0x0a, 0x07, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70,
-	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62,
-	0x2e, 0x4c, 0x69, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x52, 0x65, 0x70, 0x6c,
-	0x79, 0x2e, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x07, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70,
-	0x73, 0x1a, 0x43, 0x0a, 0x06, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x12, 0x1d, 0x0a, 0x03, 0x6b,
-	0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70,
-	0x62, 0x2e, 0x4b, 0x65, 0x79, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x1a, 0x0a, 0x08, 0x69, 0x70,
-	0x66, 0x73, 0x50, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x69, 0x70,
-	0x66, 0x73, 0x50, 0x61, 0x74, 0x68, 0x32, 0x98, 0x03, 0x0a, 0x03, 0x41, 0x50, 0x49, 0x12, 0x51,
-	0x0a, 0x0f, 0x47, 0x65, 0x74, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63,
-	0x65, 0x12, 0x1e, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x74, 0x4b, 0x65,
-	0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x1c, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x74, 0x4b, 0x65,
-	0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22,
-	0x00, 0x12, 0x5a, 0x0a, 0x12, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f,
-	0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x12, 0x21, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62,
-	0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72, 0x44, 0x65, 0x76,
-	0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x61, 0x70, 0x69,
-	0x2e, 0x70, 0x62, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x46, 0x6f, 0x72,
-	0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22, 0x00, 0x12, 0x3f, 0x0a,
-	0x09, 0x41, 0x64, 0x64, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x12, 0x18, 0x2e, 0x61, 0x70, 0x69,
-	0x2e, 0x70, 0x62, 0x2e, 0x41, 0x64, 0x64, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x41, 0x64,
-	0x64, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22, 0x00, 0x12, 0x5a,
-	0x0a, 0x12, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x42, 0x61,
-	0x63, 0x6b, 0x75, 0x70, 0x12, 0x21, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x55, 0x70,
+	0x70, 0x44, 0x69, 0x72, 0x22, 0x2e, 0x0a, 0x0e, 0x41, 0x64, 0x64, 0x42, 0x61, 0x63, 0x6b, 0x75,
+	0x70, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x1c, 0x0a, 0x09, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70,
+	0x43, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x62, 0x61, 0x63, 0x6b, 0x75,
+	0x70, 0x43, 0x69, 0x64, 0x22, 0x55, 0x0a, 0x19, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4c, 0x61,
+	0x74, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x1a, 0x0a, 0x08, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x08, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x49, 0x44, 0x12, 0x1c, 0x0a,
+	0x09, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x43, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x09, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x43, 0x69, 0x64, 0x22, 0x41, 0x0a, 0x17, 0x55,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75,
+	0x70, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x26, 0x0a, 0x06, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e,
+	0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x06, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x22, 0x14,
+	0x0a, 0x12, 0x4c, 0x69, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x22, 0x3c, 0x0a, 0x10, 0x4c, 0x69, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b,
+	0x75, 0x70, 0x73, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x28, 0x0a, 0x07, 0x62, 0x61, 0x63, 0x6b,
+	0x75, 0x70, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x61, 0x70, 0x69, 0x2e,
+	0x70, 0x62, 0x2e, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x07, 0x62, 0x61, 0x63, 0x6b, 0x75,
+	0x70, 0x73, 0x32, 0xe9, 0x01, 0x0a, 0x03, 0x41, 0x50, 0x49, 0x12, 0x3f, 0x0a, 0x09, 0x41, 0x64,
+	0x64, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x12, 0x18, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62,
+	0x2e, 0x41, 0x64, 0x64, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x16, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x41, 0x64, 0x64, 0x42, 0x61,
+	0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22, 0x00, 0x12, 0x5a, 0x0a, 0x12, 0x55,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75,
+	0x70, 0x12, 0x21, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74,
+	0x65, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x55, 0x70,
 	0x64, 0x61, 0x74, 0x65, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62,
-	0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63,
-	0x6b, 0x75, 0x70, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22, 0x00, 0x12, 0x45, 0x0a, 0x0b, 0x4c, 0x69,
-	0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x12, 0x1a, 0x2e, 0x61, 0x70, 0x69, 0x2e,
-	0x70, 0x62, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x4c,
-	0x69, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22,
-	0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x52, 0x65, 0x70, 0x6c, 0x79, 0x22, 0x00, 0x12, 0x45, 0x0a, 0x0b, 0x4c, 0x69, 0x73, 0x74, 0x42,
+	0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x12, 0x1a, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e,
+	0x4c, 0x69, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x18, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x62, 0x2e, 0x4c, 0x69, 0x73, 0x74,
+	0x42, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x73, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x22, 0x00, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -756,43 +439,32 @@ func file_api_proto_rawDescGZIP() []byte {
 	return file_api_proto_rawDescData
 }
 
-var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_api_proto_goTypes = []interface{}{
-	(*Key)(nil),                           // 0: api.pb.Key
-	(*GetKeyForDeviceRequest)(nil),        // 1: api.pb.GetKeyForDeviceRequest
-	(*GetKeyForDeviceReply)(nil),          // 2: api.pb.GetKeyForDeviceReply
-	(*CreateKeyForDeviceRequest)(nil),     // 3: api.pb.CreateKeyForDeviceRequest
-	(*CreateKeyForDeviceReply)(nil),       // 4: api.pb.CreateKeyForDeviceReply
-	(*AddBackupRequest)(nil),              // 5: api.pb.AddBackupRequest
-	(*AddBackupReply)(nil),                // 6: api.pb.AddBackupReply
-	(*UpdateLatestBackupRequest)(nil),     // 7: api.pb.UpdateLatestBackupRequest
-	(*UpdateLatestBackupReply)(nil),       // 8: api.pb.UpdateLatestBackupReply
-	(*ListBackupsRequest)(nil),            // 9: api.pb.ListBackupsRequest
-	(*ListBackupsReply)(nil),              // 10: api.pb.ListBackupsReply
-	(*UpdateLatestBackupReply_Entry)(nil), // 11: api.pb.UpdateLatestBackupReply.Entry
-	(*ListBackupsReply_Backup)(nil),       // 12: api.pb.ListBackupsReply.Backup
+	(*Backup)(nil),                    // 0: api.pb.Backup
+	(*AddBackupRequest)(nil),          // 1: api.pb.AddBackupRequest
+	(*AddBackupReply)(nil),            // 2: api.pb.AddBackupReply
+	(*UpdateLatestBackupRequest)(nil), // 3: api.pb.UpdateLatestBackupRequest
+	(*UpdateLatestBackupReply)(nil),   // 4: api.pb.UpdateLatestBackupReply
+	(*ListBackupsRequest)(nil),        // 5: api.pb.ListBackupsRequest
+	(*ListBackupsReply)(nil),          // 6: api.pb.ListBackupsReply
+	(*timestamp.Timestamp)(nil),       // 7: google.protobuf.Timestamp
 }
 var file_api_proto_depIdxs = []int32{
-	0,  // 0: api.pb.GetKeyForDeviceReply.key:type_name -> api.pb.Key
-	0,  // 1: api.pb.CreateKeyForDeviceReply.key:type_name -> api.pb.Key
-	11, // 2: api.pb.UpdateLatestBackupReply.entry:type_name -> api.pb.UpdateLatestBackupReply.Entry
-	12, // 3: api.pb.ListBackupsReply.backups:type_name -> api.pb.ListBackupsReply.Backup
-	0,  // 4: api.pb.ListBackupsReply.Backup.key:type_name -> api.pb.Key
-	1,  // 5: api.pb.API.GetKeyForDevice:input_type -> api.pb.GetKeyForDeviceRequest
-	3,  // 6: api.pb.API.CreateKeyForDevice:input_type -> api.pb.CreateKeyForDeviceRequest
-	5,  // 7: api.pb.API.AddBackup:input_type -> api.pb.AddBackupRequest
-	7,  // 8: api.pb.API.UpdateLatestBackup:input_type -> api.pb.UpdateLatestBackupRequest
-	9,  // 9: api.pb.API.ListBackups:input_type -> api.pb.ListBackupsRequest
-	2,  // 10: api.pb.API.GetKeyForDevice:output_type -> api.pb.GetKeyForDeviceReply
-	4,  // 11: api.pb.API.CreateKeyForDevice:output_type -> api.pb.CreateKeyForDeviceReply
-	6,  // 12: api.pb.API.AddBackup:output_type -> api.pb.AddBackupReply
-	8,  // 13: api.pb.API.UpdateLatestBackup:output_type -> api.pb.UpdateLatestBackupReply
-	10, // 14: api.pb.API.ListBackups:output_type -> api.pb.ListBackupsReply
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	7, // 0: api.pb.Backup.updatedAt:type_name -> google.protobuf.Timestamp
+	0, // 1: api.pb.UpdateLatestBackupReply.backup:type_name -> api.pb.Backup
+	0, // 2: api.pb.ListBackupsReply.backups:type_name -> api.pb.Backup
+	1, // 3: api.pb.API.AddBackup:input_type -> api.pb.AddBackupRequest
+	3, // 4: api.pb.API.UpdateLatestBackup:input_type -> api.pb.UpdateLatestBackupRequest
+	5, // 5: api.pb.API.ListBackups:input_type -> api.pb.ListBackupsRequest
+	2, // 6: api.pb.API.AddBackup:output_type -> api.pb.AddBackupReply
+	4, // 7: api.pb.API.UpdateLatestBackup:output_type -> api.pb.UpdateLatestBackupReply
+	6, // 8: api.pb.API.ListBackups:output_type -> api.pb.ListBackupsReply
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_init() }
@@ -802,7 +474,7 @@ func file_api_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_api_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Key); i {
+			switch v := v.(*Backup); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -814,54 +486,6 @@ func file_api_proto_init() {
 			}
 		}
 		file_api_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetKeyForDeviceRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_api_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetKeyForDeviceReply); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_api_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateKeyForDeviceRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_api_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateKeyForDeviceReply); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_api_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AddBackupRequest); i {
 			case 0:
 				return &v.state
@@ -873,7 +497,7 @@ func file_api_proto_init() {
 				return nil
 			}
 		}
-		file_api_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_api_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AddBackupReply); i {
 			case 0:
 				return &v.state
@@ -885,7 +509,7 @@ func file_api_proto_init() {
 				return nil
 			}
 		}
-		file_api_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_api_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateLatestBackupRequest); i {
 			case 0:
 				return &v.state
@@ -897,7 +521,7 @@ func file_api_proto_init() {
 				return nil
 			}
 		}
-		file_api_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_api_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateLatestBackupReply); i {
 			case 0:
 				return &v.state
@@ -909,7 +533,7 @@ func file_api_proto_init() {
 				return nil
 			}
 		}
-		file_api_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_api_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListBackupsRequest); i {
 			case 0:
 				return &v.state
@@ -921,32 +545,8 @@ func file_api_proto_init() {
 				return nil
 			}
 		}
-		file_api_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_api_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListBackupsReply); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_api_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateLatestBackupReply_Entry); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_api_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListBackupsReply_Backup); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -964,7 +564,7 @@ func file_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -990,8 +590,6 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type APIClient interface {
-	GetKeyForDevice(ctx context.Context, in *GetKeyForDeviceRequest, opts ...grpc.CallOption) (*GetKeyForDeviceReply, error)
-	CreateKeyForDevice(ctx context.Context, in *CreateKeyForDeviceRequest, opts ...grpc.CallOption) (*CreateKeyForDeviceReply, error)
 	AddBackup(ctx context.Context, in *AddBackupRequest, opts ...grpc.CallOption) (*AddBackupReply, error)
 	UpdateLatestBackup(ctx context.Context, in *UpdateLatestBackupRequest, opts ...grpc.CallOption) (*UpdateLatestBackupReply, error)
 	ListBackups(ctx context.Context, in *ListBackupsRequest, opts ...grpc.CallOption) (*ListBackupsReply, error)
@@ -1003,24 +601,6 @@ type aPIClient struct {
 
 func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
-}
-
-func (c *aPIClient) GetKeyForDevice(ctx context.Context, in *GetKeyForDeviceRequest, opts ...grpc.CallOption) (*GetKeyForDeviceReply, error) {
-	out := new(GetKeyForDeviceReply)
-	err := c.cc.Invoke(ctx, "/api.pb.API/GetKeyForDevice", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aPIClient) CreateKeyForDevice(ctx context.Context, in *CreateKeyForDeviceRequest, opts ...grpc.CallOption) (*CreateKeyForDeviceReply, error) {
-	out := new(CreateKeyForDeviceReply)
-	err := c.cc.Invoke(ctx, "/api.pb.API/CreateKeyForDevice", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *aPIClient) AddBackup(ctx context.Context, in *AddBackupRequest, opts ...grpc.CallOption) (*AddBackupReply, error) {
@@ -1052,8 +632,6 @@ func (c *aPIClient) ListBackups(ctx context.Context, in *ListBackupsRequest, opt
 
 // APIServer is the server API for API service.
 type APIServer interface {
-	GetKeyForDevice(context.Context, *GetKeyForDeviceRequest) (*GetKeyForDeviceReply, error)
-	CreateKeyForDevice(context.Context, *CreateKeyForDeviceRequest) (*CreateKeyForDeviceReply, error)
 	AddBackup(context.Context, *AddBackupRequest) (*AddBackupReply, error)
 	UpdateLatestBackup(context.Context, *UpdateLatestBackupRequest) (*UpdateLatestBackupReply, error)
 	ListBackups(context.Context, *ListBackupsRequest) (*ListBackupsReply, error)
@@ -1063,12 +641,6 @@ type APIServer interface {
 type UnimplementedAPIServer struct {
 }
 
-func (*UnimplementedAPIServer) GetKeyForDevice(context.Context, *GetKeyForDeviceRequest) (*GetKeyForDeviceReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetKeyForDevice not implemented")
-}
-func (*UnimplementedAPIServer) CreateKeyForDevice(context.Context, *CreateKeyForDeviceRequest) (*CreateKeyForDeviceReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateKeyForDevice not implemented")
-}
 func (*UnimplementedAPIServer) AddBackup(context.Context, *AddBackupRequest) (*AddBackupReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddBackup not implemented")
 }
@@ -1081,42 +653,6 @@ func (*UnimplementedAPIServer) ListBackups(context.Context, *ListBackupsRequest)
 
 func RegisterAPIServer(s *grpc.Server, srv APIServer) {
 	s.RegisterService(&_API_serviceDesc, srv)
-}
-
-func _API_GetKeyForDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetKeyForDeviceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(APIServer).GetKeyForDevice(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/api.pb.API/GetKeyForDevice",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetKeyForDevice(ctx, req.(*GetKeyForDeviceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _API_CreateKeyForDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateKeyForDeviceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(APIServer).CreateKeyForDevice(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/api.pb.API/CreateKeyForDevice",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).CreateKeyForDevice(ctx, req.(*CreateKeyForDeviceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _API_AddBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1177,14 +713,6 @@ var _API_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "api.pb.API",
 	HandlerType: (*APIServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "GetKeyForDevice",
-			Handler:    _API_GetKeyForDevice_Handler,
-		},
-		{
-			MethodName: "CreateKeyForDevice",
-			Handler:    _API_CreateKeyForDevice_Handler,
-		},
 		{
 			MethodName: "AddBackup",
 			Handler:    _API_AddBackup_Handler,

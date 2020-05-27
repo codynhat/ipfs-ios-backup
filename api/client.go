@@ -30,20 +30,6 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-// GetKeyForDevice fetches the IPNS key for a device
-func (c *Client) GetKeyForDevice(ctx context.Context, deviceID string) (*pb.GetKeyForDeviceReply, error) {
-	return c.c.GetKeyForDevice(ctx, &pb.GetKeyForDeviceRequest{
-		DeviceID: deviceID,
-	})
-}
-
-// CreateKeyForDevice creates a new IPNS key for a device
-func (c *Client) CreateKeyForDevice(ctx context.Context, deviceID string) (*pb.CreateKeyForDeviceReply, error) {
-	return c.c.CreateKeyForDevice(ctx, &pb.CreateKeyForDeviceRequest{
-		DeviceID: deviceID,
-	})
-}
-
 // AddBackup adds a new backup to IPFS
 func (c *Client) AddBackup(ctx context.Context, backupDir string) (*pb.AddBackupReply, error) {
 	return c.c.AddBackup(ctx, &pb.AddBackupRequest{
@@ -52,10 +38,10 @@ func (c *Client) AddBackup(ctx context.Context, backupDir string) (*pb.AddBackup
 }
 
 // UpdateLatestBackup saves a reference to the latest backup
-func (c *Client) UpdateLatestBackup(ctx context.Context, deviceID string, backupPath string) (*pb.UpdateLatestBackupReply, error) {
+func (c *Client) UpdateLatestBackup(ctx context.Context, deviceID string, backupCid string) (*pb.UpdateLatestBackupReply, error) {
 	return c.c.UpdateLatestBackup(ctx, &pb.UpdateLatestBackupRequest{
-		DeviceID:   deviceID,
-		BackupPath: backupPath,
+		DeviceID:  deviceID,
+		BackupCid: backupCid,
 	})
 }
 
