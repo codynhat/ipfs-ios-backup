@@ -19,8 +19,7 @@ import (
 )
 
 type Backup struct {
-	ID              core.InstanceID `json:"_id"`
-	DeviceID        string
+	ID              core.InstanceID `json:"_id"` // DeviceID
 	LatestBackupCid string
 	UpdatedAt       time.Time
 }
@@ -55,7 +54,7 @@ func (s *Service) UpdateLatestBackup(ctx context.Context, req *pb.UpdateLatestBa
 	deviceID := idevice.DeviceID(req.DeviceID)
 
 	backup := &Backup{
-		DeviceID:        string(deviceID),
+		ID:              core.InstanceID(deviceID),
 		LatestBackupCid: req.BackupCid,
 		UpdatedAt:       time.Now(),
 	}
@@ -84,7 +83,7 @@ func (s *Service) UpdateLatestBackup(ctx context.Context, req *pb.UpdateLatestBa
 
 	return &pb.UpdateLatestBackupReply{
 		Backup: &pb.Backup{
-			DeviceID:  backup.DeviceID,
+			DeviceID:  backup.ID.String(),
 			BackupCid: backup.LatestBackupCid,
 			UpdatedAt: t,
 		},
@@ -110,7 +109,7 @@ func (s *Service) ListBackups(ctx context.Context, req *pb.ListBackupsRequest) (
 		}
 
 		results = append(results, &pb.Backup{
-			DeviceID:  backup.DeviceID,
+			DeviceID:  backup.ID.String(),
 			BackupCid: backup.LatestBackupCid,
 			UpdatedAt: t,
 		})
@@ -128,6 +127,7 @@ func (s *Service) addBackupToIpfs(ctx context.Context, backupDir string) (cid.Ci
 	}
 
 	opts := []options.UnixfsAddOption{
+		options.Unixfs.Pin(true),
 		options.Unixfs.Nocopy(true),
 	}
 	cidDirectory, err := s.ipfs.Unixfs().Add(ctx, backupDirNode, opts...)
@@ -139,7 +139,7 @@ func (s *Service) addBackupToIpfs(ctx context.Context, backupDir string) (cid.Ci
 }
 
 func (s *Service) backupExistsForDevice(deviceID idevice.DeviceID) (bool, error) {
-	backups, err := s.backupCollection.Find(db.Where("DeviceID").Eq(string(deviceID)))
+	backups, err := s.backupCollection.FindByID(core.InstanceID(deviceID))
 	if err != nil {
 		return false, err
 	}

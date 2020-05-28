@@ -33,11 +33,13 @@ import (
 	pb "github.com/codynhat/ipfs-ios-backup/api/pb"
 	"github.com/codynhat/ipfs-ios-backup/idevice"
 	"github.com/go-co-op/gocron"
+	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/core/node/libp2p"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	icore "github.com/ipfs/interface-go-ipfs-core"
+	"github.com/ipfs/interface-go-ipfs-core/path"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -75,16 +77,28 @@ var daemonCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		collection, clean, err := loadBackupCollection(repoPath, threadID, viper.GetBool("debug"))
+		d, clean, err := loadBackupDB(repoPath, threadID, viper.GetBool("debug"))
 		defer clean()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// Run schedules
-		err = startSchedules(ctx, viper.Sub("schedules"), repoPath)
+		collection := d.GetCollection("Backup")
+
+		log.Info("Listening for backups performed by others on the thread...")
+		err = listenForBackups(ctx, d, collection, ipfs)
 		if err != nil {
 			log.Fatal(err)
+		}
+
+		// Run schedules
+		schedules := viper.Sub("schedules")
+		if schedules != nil {
+			log.Info("Starting schedules")
+			err = startSchedules(ctx, viper.Sub("schedules"), repoPath)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		ptarget, err := TcpAddrFromMultiAddr(addr)
@@ -164,7 +178,7 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 	return coreapi.NewCoreAPI(node)
 }
 
-func loadBackupCollection(repoRoot string, threadID thread.ID, debug bool) (*db.Collection, func(), error) {
+func loadBackupDB(repoRoot string, threadID thread.ID, debug bool) (*db.DB, func(), error) {
 	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(debug), common.WithNetHostAddr(util.FreeLocalAddr()))
 
 	if err != nil {
@@ -176,9 +190,54 @@ func loadBackupCollection(repoRoot string, threadID thread.ID, debug bool) (*db.
 		return nil, nil, err
 	}
 
-	collection := d.GetCollection("Backup")
+	return d, func() { d.Close() }, nil
+}
 
-	return collection, func() { d.Close() }, nil
+// Listen for new backups made on any device in the thread
+func listenForBackups(ctx context.Context, d *db.DB, collection *db.Collection, ipfs icore.CoreAPI) error {
+	l, err := d.Listen(db.ListenOption{
+		Type:       db.ListenAll,
+		Collection: "Backup",
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer l.Close()
+
+		for action := range l.Channel() {
+			switch action.Type {
+			case db.ActionDelete:
+				break
+			default:
+				v, err := collection.FindByID(action.ID)
+				if err != nil {
+					log.Errorf("error when listening to thread: %v", err)
+					continue
+				}
+
+				backup := &api.Backup{}
+				util.InstanceFromJSON(v, backup)
+
+				id, err := cid.Decode(backup.LatestBackupCid)
+				if err != nil {
+					log.Errorf("error when listening to thread: %v", err)
+					continue
+				}
+
+				log.Infof("Found new backup. Pinning %v", id)
+				err = ipfs.Pin().Add(ctx, path.IpfsPath(id))
+				if err != nil {
+					log.Errorf("error when listening to thread: %v", err)
+					continue
+				}
+			}
+		}
+	}()
+
+	return nil
 }
 
 func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string) error {
