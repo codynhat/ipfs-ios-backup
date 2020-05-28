@@ -41,8 +41,8 @@ type export struct {
 // exportCmd represents the export command
 var exportCmd = &cobra.Command{
 	Use:   "export-secrets",
-	Short: "Export secrets needed to share backups with another device",
-	Long:  "Export secrets needed to share backups with another device",
+	Short: "Export secrets needed to sync backups with another device",
+	Long:  "Export secrets needed to sync backups with another device",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

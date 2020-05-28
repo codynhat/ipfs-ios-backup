@@ -229,6 +229,7 @@ func listenForBackups(ctx context.Context, d *db.DB, collection *db.Collection, 
 
 				log.Infof("Found new backup. Pinning %v", id)
 				err = ipfs.Pin().Add(ctx, path.IpfsPath(id))
+				log.Infof("Pinned %v", id)
 				if err != nil {
 					log.Errorf("error when listening to thread: %v", err)
 					continue

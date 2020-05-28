@@ -161,8 +161,12 @@ func (s *Service) addBackupToIpfs(ctx context.Context, backupDir string) (cid.Ci
 
 func (s *Service) backupExistsForDevice(deviceID idevice.DeviceID) (bool, error) {
 	backups, err := s.backupCollection.FindByID(core.InstanceID(deviceID))
-	if err != nil {
+	if err != nil && err != db.ErrNotFound {
 		return false, err
+	}
+
+	if err == db.ErrNotFound {
+		return false, nil
 	}
 
 	return len(backups) > 0, nil

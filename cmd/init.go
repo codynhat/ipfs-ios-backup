@@ -25,15 +25,18 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/codynhat/ipfs-ios-backup/api"
 	config "github.com/ipfs/go-ipfs-config"
 	"github.com/ipfs/go-ipfs/plugin/loader"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/textileio/go-threads/common"
@@ -42,12 +45,19 @@ import (
 	"github.com/textileio/go-threads/util"
 )
 
+var (
+	secretsImportPath string
+)
+
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize ipfs-ios-backup repo",
 	Long:  "Initialize ipfs-ios-backup repo",
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		// Find repo path
 		repoPath := viper.GetString("repoPath")
 
@@ -71,13 +81,22 @@ var initCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		threadID, clean, err := initThreadsRepo(repoPath)
+		var existingExport *export
+		if secretsImportPath != "" {
+			existingExport, err = importSecrets(secretsImportPath)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			fmt.Printf("Importing secrets from %v\n", secretsImportPath)
+		}
+
+		threadID, clean, err := initThreadsRepo(ctx, repoPath, existingExport)
 		defer clean()
 		if err != nil {
 			log.Fatalf("Could not initialize threads repo: %s", err)
 		}
 
-		fmt.Printf("Created thread %s\n", threadID)
 		fmt.Printf("Repo created at %s\n", repoPath)
 
 		viper.Set("threadID", threadID)
@@ -91,6 +110,8 @@ var initCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(initCmd)
+
+	initCmd.Flags().StringVar(&secretsImportPath, "secrets", "", "Secrets file exported from another node")
 }
 
 func initIpfsRepo(repoRoot string) error {
@@ -203,26 +224,97 @@ func createSwarmKey(ipfsRepoRoot string) error {
 	return nil
 }
 
-func initThreadsRepo(repoRoot string) (thread.ID, func(), error) {
+func initThreadsRepo(ctx context.Context, repoRoot string, existingExport *export) (thread.ID, func(), error) {
 	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(true))
 	if err != nil {
 		return thread.Undef, nil, err
 	}
 
-	id := thread.NewIDV1(thread.Raw, 32)
-	d, err := db.NewDB(context.Background(), net, id, db.WithNewDBRepoPath(repoRoot))
-	if err != nil {
-		return thread.Undef, nil, err
+	var id thread.ID
+	var d *db.DB
+	if existingExport == nil {
+		id = thread.NewIDV1(thread.Raw, 32)
+		d, err = db.NewDB(ctx, net, id, db.WithNewDBRepoPath(repoRoot))
+		if err != nil {
+			return thread.Undef, func() { net.Close() }, err
+		}
+
+		_, err = d.NewCollection(db.CollectionConfig{
+			Name:   "Backup",
+			Schema: util.SchemaFromInstance(&api.Backup{}, false),
+		})
+
+		if err != nil {
+			return thread.Undef, func() { d.Close(); net.Close() }, err
+		}
+
+		fmt.Printf("Created thread %s\n", id)
+	} else {
+		key, err := thread.KeyFromString(existingExport.ThreadKey)
+		if err != nil {
+			return thread.Undef, func() { net.Close() }, err
+		}
+
+		for _, rawAddr := range existingExport.Addrs {
+			mctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			addr, err := ma.NewMultiaddr(rawAddr)
+			if err != nil {
+				return thread.Undef, func() { net.Close() }, err
+			}
+
+			cc1 := db.CollectionConfig{
+				Name:   "Backup",
+				Schema: util.SchemaFromInstance(&api.Backup{}, false),
+			}
+
+			d, err = db.NewDBFromAddr(mctx, net, addr, key, db.WithNewDBRepoPath(repoRoot), db.WithNewDBCollections(cc1))
+			if err != nil {
+				log.Warnf("Could not dial addr %v: %v", addr, err)
+				continue
+			}
+
+			id, err = thread.FromAddr(addr)
+			if err != nil {
+				return thread.Undef, func() { d.Close(); net.Close() }, fmt.Errorf("could not parse thread ID from address: %v", err)
+			}
+
+			fmt.Printf("Joined thread %s\n", id)
+
+			break
+		}
+
+		if d == nil {
+			return thread.Undef, func() { net.Close() }, fmt.Errorf("could not create DB from existing export")
+		}
 	}
 
-	_, err = d.NewCollection(db.CollectionConfig{
-		Name:   "Backup",
-		Schema: util.SchemaFromInstance(&api.Backup{}, false),
-	})
+	return id, func() { d.Close(); net.Close() }, nil
+}
 
+func importSecrets(filePath string) (*export, error) {
+	s, err := os.Stat(filePath)
 	if err != nil {
-		return thread.Undef, func() { d.Close() }, err
+		return nil, err
 	}
 
-	return id, func() { d.Close() }, nil
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	b2 := make([]byte, s.Size())
+	n2, err := f.Read(b2)
+	if err != nil {
+		return nil, err
+	}
+
+	exportJ := string(b2[:n2])
+
+	e := export{}
+
+	json.Unmarshal([]byte(exportJ), &e)
+
+	return &e, nil
 }
