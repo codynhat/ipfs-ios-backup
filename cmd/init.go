@@ -36,6 +36,7 @@ import (
 	config "github.com/ipfs/go-ipfs-config"
 	"github.com/ipfs/go-ipfs/plugin/loader"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -77,10 +78,6 @@ var initCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		if err := initIpfsRepo(repoPath); err != nil {
-			log.Fatal(err)
-		}
-
 		var existingExport *export
 		if secretsImportPath != "" {
 			existingExport, err = importSecrets(secretsImportPath)
@@ -91,7 +88,26 @@ var initCmd = &cobra.Command{
 			fmt.Printf("Importing secrets from %v\n", secretsImportPath)
 		}
 
-		threadID, clean, err := initThreadsRepo(ctx, repoPath, existingExport)
+		// Get IPFS bootstrap list
+		ipfsBootstrapList := viper.GetStringSlice("ipfsBootstrapList")
+
+		// Get Threads bootstrap list
+		threadsBootstrapList := viper.GetStringSlice("threadsBootstrapList")
+		threadsBootstrapAddrs := make([]ma.Multiaddr, len(threadsBootstrapList))
+		for i, v := range threadsBootstrapList {
+			a, err := ma.NewMultiaddr(v)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			threadsBootstrapAddrs[i] = a
+		}
+
+		if err := initIpfsRepo(repoPath, existingExport, ipfsBootstrapList); err != nil {
+			log.Fatal(err)
+		}
+
+		threadID, clean, err := initThreadsRepo(ctx, repoPath, existingExport, threadsBootstrapAddrs)
 		defer clean()
 		if err != nil {
 			log.Fatalf("Could not initialize threads repo: %s", err)
@@ -114,7 +130,7 @@ func init() {
 	initCmd.Flags().StringVar(&secretsImportPath, "secrets", "", "Secrets file exported from another node")
 }
 
-func initIpfsRepo(repoRoot string) error {
+func initIpfsRepo(repoRoot string, existingExport *export, ipfsBootstrapList []string) error {
 	ipfsRepoRoot := filepath.Join(repoRoot, ".ipfs")
 
 	if err := checkWritable(ipfsRepoRoot); err != nil {
@@ -136,7 +152,7 @@ func initIpfsRepo(repoRoot string) error {
 		return fmt.Errorf("Could not create config: %s", err)
 	}
 
-	customizeConfig(cfg)
+	customizeConfig(cfg, ipfsBootstrapList)
 
 	// Create the repo with the config
 	err = fsrepo.Init(ipfsRepoRoot, cfg)
@@ -144,17 +160,20 @@ func initIpfsRepo(repoRoot string) error {
 		return fmt.Errorf("Could not initialize repo: %s", err)
 	}
 
-	createSwarmKey(ipfsRepoRoot)
+	createSwarmKey(ipfsRepoRoot, existingExport)
 
 	return nil
 }
 
-func customizeConfig(cfg *config.Config) {
-	// Remove Bootstrap list
-	cfg.Bootstrap = make([]string, 0)
+func customizeConfig(cfg *config.Config, ipfsBootstrapList []string) {
+	// Set Bootstrap list
+	cfg.Bootstrap = ipfsBootstrapList
 
 	// Enable Filestore
 	cfg.Experimental.FilestoreEnabled = true
+
+	// Set swarm addr
+	cfg.Addresses.Swarm = []string{ipfsAddr.String()}
 }
 
 // Taken from go-ipfs example
@@ -207,16 +226,23 @@ func checkWritable(dir string) error {
 }
 
 // See https://github.com/Kubuxu/go-ipfs-swarm-key-gen
-func createSwarmKey(ipfsRepoRoot string) error {
-	key := make([]byte, 32)
-	_, err := rand.Read(key)
-	if err != nil {
-		return fmt.Errorf("While trying to create swarm key: %s", err)
+func createSwarmKey(ipfsRepoRoot string, existingExport *export) error {
+	var swarmKey string
+	if existingExport == nil {
+		key := make([]byte, 32)
+		_, err := rand.Read(key)
+		if err != nil {
+			return fmt.Errorf("While trying to create swarm key: %s", err)
+		}
+
+		encodedKey := hex.EncodeToString(key)
+		swarmKey = fmt.Sprintf("/key/swarm/psk/1.0.0/\n/base16/\n%s\n", encodedKey)
+	} else {
+		swarmKey = existingExport.SwarmKey
 	}
 
-	encodedKey := hex.EncodeToString(key)
 	swarmKeyPath := filepath.Join(ipfsRepoRoot, "swarm.key")
-	err = ioutil.WriteFile(swarmKeyPath, []byte(fmt.Sprintf("/key/swarm/psk/1.0.0/\n/base16/\n%s\n", encodedKey)), 0644)
+	err := ioutil.WriteFile(swarmKeyPath, []byte(swarmKey), 0644)
 	if err != nil {
 		return fmt.Errorf("Failed to write swarm key: %s", err)
 	}
@@ -224,11 +250,18 @@ func createSwarmKey(ipfsRepoRoot string) error {
 	return nil
 }
 
-func initThreadsRepo(ctx context.Context, repoRoot string, existingExport *export) (thread.ID, func(), error) {
-	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(true))
+func initThreadsRepo(ctx context.Context, repoRoot string, existingExport *export, bootstrapAddrs []ma.Multiaddr) (thread.ID, func(), error) {
+	addrInfos, err := peer.AddrInfosFromP2pAddrs(bootstrapAddrs...)
 	if err != nil {
 		return thread.Undef, nil, err
 	}
+
+	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(true), common.WithNetHostAddr(threadsAddr))
+	if err != nil {
+		return thread.Undef, nil, err
+	}
+
+	net.Bootstrap(addrInfos)
 
 	var id thread.ID
 	var d *db.DB

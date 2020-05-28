@@ -35,11 +35,13 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/bootstrap"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/core/node/libp2p"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	icore "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -64,8 +66,32 @@ var daemonCmd = &cobra.Command{
 
 		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
 
+		// Get IPFS bootstrap list
+		ipfsBootstrapList := viper.GetStringSlice("ipfsBootstrapList")
+		ipfsBootstrapAddrs := make([]ma.Multiaddr, len(ipfsBootstrapList))
+		for i, v := range ipfsBootstrapList {
+			a, err := ma.NewMultiaddr(v)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			ipfsBootstrapAddrs[i] = a
+		}
+
+		// Get Threads bootstrap list
+		threadsBootstrapList := viper.GetStringSlice("threadsBootstrapList")
+		threadsBootstrapAddrs := make([]ma.Multiaddr, len(threadsBootstrapList))
+		for i, v := range threadsBootstrapList {
+			a, err := ma.NewMultiaddr(v)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			threadsBootstrapAddrs[i] = a
+		}
+
 		// Spawn IPFS node
-		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
+		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot, ipfsBootstrapAddrs)
 		if err != nil {
 			log.Fatalf("Failed to spawn IPFS node: %v", err)
 		}
@@ -77,7 +103,7 @@ var daemonCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		d, clean, err := loadBackupDB(repoPath, threadID, viper.GetBool("debug"))
+		d, clean, err := loadBackupDB(repoPath, threadID, viper.GetBool("debug"), threadsBootstrapAddrs)
 		defer clean()
 		if err != nil {
 			log.Fatal(err)
@@ -101,7 +127,7 @@ var daemonCmd = &cobra.Command{
 			}
 		}
 
-		ptarget, err := TcpAddrFromMultiAddr(addr)
+		ptarget, err := TcpAddrFromMultiAddr(apiAddr)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -143,7 +169,7 @@ func TcpAddrFromMultiAddr(maddr ma.Multiaddr) (addr string, err error) {
 }
 
 // See https://github.com/ipfs/go-ipfs/blob/master/docs/examples/go-ipfs-as-a-library/main.go
-func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error) {
+func createIpfsNode(ctx context.Context, repoPath string, bootstrapAddrs []ma.Multiaddr) (icore.CoreAPI, error) {
 	// Check if swarm key exists
 	swarmKeyPath := filepath.Join(repoPath, "swarm.key")
 	_, err := os.Stat(swarmKeyPath)
@@ -174,16 +200,34 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 		return nil, err
 	}
 
+	addrs := node.PeerHost.Addrs()
+	for _, addr := range addrs {
+		fmt.Printf("IPFS node started listening on %v/p2p/%v\n", addr, node.Identity)
+	}
+
+	// Bootstrap
+	addrInfos, err := peer.AddrInfosFromP2pAddrs(bootstrapAddrs...)
+	if err != nil {
+		return nil, err
+	}
+	node.Bootstrap(bootstrap.BootstrapConfigWithPeers(addrInfos))
+
 	// Attach the Core API to the constructed node
 	return coreapi.NewCoreAPI(node)
 }
 
-func loadBackupDB(repoRoot string, threadID thread.ID, debug bool) (*db.DB, func(), error) {
-	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(debug))
-
+func loadBackupDB(repoRoot string, threadID thread.ID, debug bool, bootstrapAddrs []ma.Multiaddr) (*db.DB, func(), error) {
+	addrInfos, err := peer.AddrInfosFromP2pAddrs(bootstrapAddrs...)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(debug), common.WithNetHostAddr(threadsAddr))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	net.Bootstrap(addrInfos)
 
 	d, err := db.NewDB(context.Background(), net, threadID, db.WithNewDBRepoPath(repoRoot))
 	if err != nil {

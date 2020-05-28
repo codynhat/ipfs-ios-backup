@@ -34,10 +34,12 @@ import (
 )
 
 var (
-	cfgFile string
-	client  *api.Client
-	addr    ma.Multiaddr
-	log     = logging.Logger("ipfs-ios-backup")
+	cfgFile     string
+	client      *api.Client
+	apiAddr     ma.Multiaddr
+	threadsAddr ma.Multiaddr
+	ipfsAddr    ma.Multiaddr
+	log         = logging.Logger("ipfs-ios-backup")
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -47,16 +49,28 @@ var rootCmd = &cobra.Command{
 	Long:  "Backup iOS devices to IPFS",
 	PersistentPreRun: func(c *cobra.Command, args []string) {
 		var opts []grpc.DialOption
-		addrAPI := viper.GetString("addrAPI")
 		opts = append(opts, grpc.WithInsecure())
 		var err error
 
-		addr, err = ma.NewMultiaddr(addrAPI)
+		rawApiAddr := viper.GetString("apiAddr")
+		apiAddr, err = ma.NewMultiaddr(rawApiAddr)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		ptarget, err := TcpAddrFromMultiAddr(addr)
+		rawThreadsAddr := viper.GetString("threadsAddr")
+		threadsAddr, err = ma.NewMultiaddr(rawThreadsAddr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		rawIpfsAddr := viper.GetString("ipfsAddr")
+		ipfsAddr, err = ma.NewMultiaddr(rawIpfsAddr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		ptarget, err := TcpAddrFromMultiAddr(apiAddr)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,8 +119,14 @@ func init() {
 	rootCmd.PersistentFlags().String("repoPath", defaultRepoPath, "Path to IPFS iOS Backup repo")
 	viper.BindPFlag("repoPath", rootCmd.PersistentFlags().Lookup("repoPath"))
 
-	rootCmd.PersistentFlags().String("addrAPI", "/ip4/127.0.0.1/tcp/3006", "API endpoint")
-	viper.BindPFlag("addrAPI", rootCmd.PersistentFlags().Lookup("addrAPI"))
+	rootCmd.PersistentFlags().String("apiAddr", "/ip4/127.0.0.1/tcp/3006", "gRPC API endpoint")
+	viper.BindPFlag("apiAddr", rootCmd.PersistentFlags().Lookup("apiAddr"))
+
+	rootCmd.PersistentFlags().String("threadsAddr", "/ip4/0.0.0.0/tcp/3010", "Threads IPFS lite node address")
+	viper.BindPFlag("threadsAddr", rootCmd.PersistentFlags().Lookup("threadsAddr"))
+
+	rootCmd.PersistentFlags().String("ipfsAddr", "/ip4/0.0.0.0/tcp/4010", "IPFS address")
+	viper.BindPFlag("ipfsAddr", rootCmd.PersistentFlags().Lookup("ipfsAddr"))
 
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
 	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
