@@ -204,7 +204,7 @@ func createSwarmKey(ipfsRepoRoot string) error {
 }
 
 func initThreadsRepo(repoRoot string) (thread.ID, func(), error) {
-	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(true), common.WithNetHostAddr(util.FreeLocalAddr()))
+	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(true))
 	if err != nil {
 		return thread.Undef, nil, err
 	}

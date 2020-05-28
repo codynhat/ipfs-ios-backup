@@ -49,3 +49,8 @@ func (c *Client) UpdateLatestBackup(ctx context.Context, deviceID string, backup
 func (c *Client) ListBackups(ctx context.Context) (*pb.ListBackupsReply, error) {
 	return c.c.ListBackups(ctx, &pb.ListBackupsRequest{})
 }
+
+// Export returns the information needed to share backups with another device
+func (c *Client) Export(ctx context.Context) (*pb.ExportReply, error) {
+	return c.c.Export(ctx, &pb.ExportRequest{})
+}

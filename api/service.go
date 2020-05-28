@@ -27,13 +27,16 @@ type Backup struct {
 // Service is a gRPC service
 type Service struct {
 	ipfs             icore.CoreAPI
+	d                *db.DB
 	backupCollection *db.Collection
 }
 
-func NewService(ipfs icore.CoreAPI, backupCollection *db.Collection) (*Service, error) {
+func NewService(ipfs icore.CoreAPI, d *db.DB) (*Service, error) {
+	collection := d.GetCollection("Backup")
 	return &Service{
 		ipfs:             ipfs,
-		backupCollection: backupCollection,
+		d:                d,
+		backupCollection: collection,
 	}, nil
 }
 
@@ -117,6 +120,24 @@ func (s *Service) ListBackups(ctx context.Context, req *pb.ListBackupsRequest) (
 
 	return &pb.ListBackupsReply{
 		Backups: results,
+	}, nil
+}
+
+// Export returns the information needed to share backups with another device
+func (s *Service) Export(ctx context.Context, req *pb.ExportRequest) (*pb.ExportReply, error) {
+	addrs, key, err := s.d.GetDBInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	var rawAddrs []string
+	for _, addr := range addrs {
+		rawAddrs = append(rawAddrs, addr.String())
+	}
+
+	return &pb.ExportReply{
+		Addrs:     rawAddrs,
+		ThreadKey: key.String(),
 	}, nil
 }
 

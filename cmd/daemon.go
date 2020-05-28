@@ -111,7 +111,7 @@ var daemonCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		service, err := api.NewService(ipfs, collection)
+		service, err := api.NewService(ipfs, d)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -179,7 +179,7 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 }
 
 func loadBackupDB(repoRoot string, threadID thread.ID, debug bool) (*db.DB, func(), error) {
-	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(debug), common.WithNetHostAddr(util.FreeLocalAddr()))
+	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(debug))
 
 	if err != nil {
 		return nil, nil, err

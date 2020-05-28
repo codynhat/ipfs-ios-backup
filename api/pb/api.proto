@@ -32,8 +32,16 @@ message ListBackupsReply {
     repeated Backup backups = 1;
 }
 
+message ExportRequest {}
+
+message ExportReply {
+    repeated string addrs = 1;
+    string threadKey = 2;
+}
+
 service API {
     rpc AddBackup(AddBackupRequest) returns (AddBackupReply) {}
     rpc UpdateLatestBackup(UpdateLatestBackupRequest) returns (UpdateLatestBackupReply) {}
     rpc ListBackups(ListBackupsRequest) returns (ListBackupsReply) {}
+    rpc Export(ExportRequest) returns (ExportReply) {}
 }
