@@ -33,17 +33,21 @@ Usage:
   ipfs-ios-backup [command]
 
 Available Commands:
-  backups     Interact with iOS backups
-  daemon      Run the ipfs-ios-backup daemon
-  devices     Interact with connected iOS devices
-  help        Help about any command
-  init        Initialize ipfs-ios-backup repo
+  backups        Interact with iOS backups
+  daemon         Run the ipfs-ios-backup daemon
+  devices        Interact with connected iOS devices
+  export-secrets Export secrets needed to sync backups with another device
+  help           Help about any command
+  init           Initialize ipfs-ios-backup repo
 
 Flags:
-      --addrAPI string    API endpoint (default "/ip4/127.0.0.1/tcp/3006")
-      --config string     config file (default is $HOME/.ipfs-ios-backup.json)
-  -h, --help              help for ipfs-ios-backup
-      --repoPath string   Path to IPFS iOS Backup repo (default "/Users/Cody/.ipfs-ios-backup")
+      --apiAddr string       gRPC API endpoint (default "/ip4/127.0.0.1/tcp/3006")
+      --config string        config file (default is $HOME/.ipfs-ios-backup.json)
+      --debug                Enable debug logging
+  -h, --help                 help for ipfs-ios-backup
+      --ipfsAddr string      IPFS address (default "/ip4/0.0.0.0/tcp/4010")
+      --repoPath string      Path to IPFS iOS Backup repo (default "$HOME/.ipfs-ios-backup.json")
+      --threadsAddr string   Threads IPFS lite node address (default "/ip4/0.0.0.0/tcp/3010")
 
 Use "ipfs-ios-backup [command] --help" for more information about a command.
 ```
@@ -141,17 +145,23 @@ A backup can be restored to a device. **YOUR DEVICE AND DATA WILL BE RESTORED**.
 ipfs-ios-backup backups restore [device-id]
 ```
 
-## Connect to private network
+## Sync backups with multiple devices
 
-Currently, the easiest way to connect `ipfs-ios-backup` to a private network is by using an IPFS daemon pointed to the embedded IPFS repo.
+Backups can be stored on multiple devices that are part of the same private IPFS network. This may be multiple computers on your home network, or a private cloud-hosted instance.
+
+To start, a single node must be [initialized](#initialize-repo). Then the secrets from this node will need to be exported.
 
 ```
-IPFS_PATH=$HOME/.ipfs-ios-backup/.ipfs ipfs daemon
+ipfs-ios-backup export-secrets > secrets.json
 ```
 
-The swarm key located in the repo (`$HOME/.ipfs-ios-backup/.ipfs/swarm.key`) must be the same as other peers in the private network. These peers will be able to query IPNS names and IPFS objects from `ipfs-ios-backup backups list`. Note, however, only the node responsible for performing backups will have the private keys for IPNS and a list of performed backups.
+The output should be saved and sent via some secure mechanism to other machines that want to join the network. These secrets can be passed when initializing these other machines.
 
-A current limitation exists that prevents `ipfs-ios-backup` daemon from running while an IPFS daemon is running.
+```
+ipfs-ios-backup init --secrets secrets.json
+```
+
+*WARNING*: Only send these secrets to trusted nodes. They will join a private IPFS swarm that has access to your backups. While the backups' contents are still encrypted using a password, the metadata is not. Any node that is part of this network will have access to the metadata.
 
 # Architecture
 
