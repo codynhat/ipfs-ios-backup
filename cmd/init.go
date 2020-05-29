@@ -297,6 +297,30 @@ func initThreadsRepo(ctx context.Context, repoRoot string, existingExport *expor
 				return thread.Undef, func() { net.Close() }, err
 			}
 
+			id, err = thread.FromAddr(addr)
+			if err != nil {
+				log.Warnf("Could not dial addr %v: %v", addr, err)
+				continue
+			}
+
+			// Try to connect
+			threadComp, err := ma.NewComponent(thread.Name, id.String())
+			if err != nil {
+				log.Warnf("Could not dial addr %v: %v", addr, err)
+				continue
+			}
+			peerAddr := addr.Decapsulate(threadComp)
+			addri, err := peer.AddrInfoFromP2pAddr(peerAddr)
+			if err != nil {
+				log.Warnf("Could not dial addr %v: %v", addr, err)
+				continue
+			}
+			if err = net.Host().Connect(ctx, *addri); err != nil {
+				log.Warnf("Could not dial addr %v: %v", addr, err)
+				continue
+			}
+
+			// If successful add DB
 			cc1 := db.CollectionConfig{
 				Name:   "Backup",
 				Schema: util.SchemaFromInstance(&api.Backup{}, false),
@@ -304,13 +328,8 @@ func initThreadsRepo(ctx context.Context, repoRoot string, existingExport *expor
 
 			d, err = db.NewDBFromAddr(mctx, net, addr, key, db.WithNewDBRepoPath(repoRoot), db.WithNewDBCollections(cc1))
 			if err != nil {
-				log.Warnf("Could not dial addr %v: %v", addr, err)
+				log.Warnf("Could not create db %v: %v", addr, err)
 				continue
-			}
-
-			id, err = thread.FromAddr(addr)
-			if err != nil {
-				return thread.Undef, func() { d.Close(); net.Close() }, fmt.Errorf("could not parse thread ID from address: %v", err)
 			}
 
 			fmt.Printf("Joined thread %s\n", id)
