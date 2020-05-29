@@ -33,14 +33,22 @@ import (
 	pb "github.com/codynhat/ipfs-ios-backup/api/pb"
 	"github.com/codynhat/ipfs-ios-backup/idevice"
 	"github.com/go-co-op/gocron"
+	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/bootstrap"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/core/node/libp2p"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	icore "github.com/ipfs/interface-go-ipfs-core"
+	"github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/textileio/go-threads/common"
+	"github.com/textileio/go-threads/core/thread"
+	"github.com/textileio/go-threads/db"
+	"github.com/textileio/go-threads/util"
 	"google.golang.org/grpc"
 )
 
@@ -58,19 +66,68 @@ var daemonCmd = &cobra.Command{
 
 		ipfsRepoRoot := filepath.Join(repoPath, ".ipfs")
 
+		// Get IPFS bootstrap list
+		ipfsBootstrapList := viper.GetStringSlice("ipfsBootstrapList")
+		ipfsBootstrapAddrs := make([]ma.Multiaddr, len(ipfsBootstrapList))
+		for i, v := range ipfsBootstrapList {
+			a, err := ma.NewMultiaddr(v)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			ipfsBootstrapAddrs[i] = a
+		}
+
+		// Get Threads bootstrap list
+		threadsBootstrapList := viper.GetStringSlice("threadsBootstrapList")
+		threadsBootstrapAddrs := make([]ma.Multiaddr, len(threadsBootstrapList))
+		for i, v := range threadsBootstrapList {
+			a, err := ma.NewMultiaddr(v)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			threadsBootstrapAddrs[i] = a
+		}
+
 		// Spawn IPFS node
-		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot)
+		ipfs, err := createIpfsNode(ctx, ipfsRepoRoot, ipfsBootstrapAddrs)
 		if err != nil {
 			log.Fatalf("Failed to spawn IPFS node: %v", err)
 		}
 
-		// Run schedules
-		err = startSchedules(ctx, viper.Sub("schedules"), repoPath)
+		// Load backup collection
+		rawThreadID := viper.GetString("threadID")
+		threadID, err := thread.Decode(rawThreadID)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		ptarget, err := TcpAddrFromMultiAddr(addr)
+		d, clean, err := loadBackupDB(repoPath, threadID, viper.GetBool("debug"), threadsBootstrapAddrs)
+		defer clean()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		collection := d.GetCollection("Backup")
+
+		log.Info("Listening for backups performed by others on the thread...")
+		err = listenForBackups(ctx, d, collection, ipfs)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Run schedules
+		schedules := viper.Sub("schedules")
+		if schedules != nil {
+			log.Info("Starting schedules")
+			err = startSchedules(ctx, viper.Sub("schedules"), repoPath)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		ptarget, err := TcpAddrFromMultiAddr(apiAddr)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -80,7 +137,10 @@ var daemonCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		service := api.NewService(ipfs)
+		service, err := api.NewService(ipfs, d)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		grpcServer := grpc.NewServer()
 		pb.RegisterAPIServer(grpcServer, service)
@@ -109,7 +169,7 @@ func TcpAddrFromMultiAddr(maddr ma.Multiaddr) (addr string, err error) {
 }
 
 // See https://github.com/ipfs/go-ipfs/blob/master/docs/examples/go-ipfs-as-a-library/main.go
-func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error) {
+func createIpfsNode(ctx context.Context, repoPath string, bootstrapAddrs []ma.Multiaddr) (icore.CoreAPI, error) {
 	// Check if swarm key exists
 	swarmKeyPath := filepath.Join(repoPath, "swarm.key")
 	_, err := os.Stat(swarmKeyPath)
@@ -130,8 +190,8 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 
 	// Construct the node
 	nodeOptions := &core.BuildCfg{
-		Online:  false,
-		Routing: libp2p.NilRouterOption,
+		Online:  true,
+		Routing: libp2p.DHTOption,
 		Repo:    repo,
 	}
 
@@ -140,8 +200,89 @@ func createIpfsNode(ctx context.Context, repoPath string) (icore.CoreAPI, error)
 		return nil, err
 	}
 
+	addrs := node.PeerHost.Addrs()
+	for _, addr := range addrs {
+		fmt.Printf("IPFS node started listening on %v/p2p/%v\n", addr, node.Identity)
+	}
+
+	// Bootstrap
+	addrInfos, err := peer.AddrInfosFromP2pAddrs(bootstrapAddrs...)
+	if err != nil {
+		return nil, err
+	}
+	node.Bootstrap(bootstrap.BootstrapConfigWithPeers(addrInfos))
+
 	// Attach the Core API to the constructed node
 	return coreapi.NewCoreAPI(node)
+}
+
+func loadBackupDB(repoRoot string, threadID thread.ID, debug bool, bootstrapAddrs []ma.Multiaddr) (*db.DB, func(), error) {
+	addrInfos, err := peer.AddrInfosFromP2pAddrs(bootstrapAddrs...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	net, err := common.DefaultNetwork(repoRoot, common.WithNetDebug(debug), common.WithNetHostAddr(threadsAddr))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	net.Bootstrap(addrInfos)
+
+	d, err := db.NewDB(context.Background(), net, threadID, db.WithNewDBRepoPath(repoRoot))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return d, func() { d.Close() }, nil
+}
+
+// Listen for new backups made on any device in the thread
+func listenForBackups(ctx context.Context, d *db.DB, collection *db.Collection, ipfs icore.CoreAPI) error {
+	l, err := d.Listen(db.ListenOption{
+		Type:       db.ListenAll,
+		Collection: "Backup",
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer l.Close()
+
+		for action := range l.Channel() {
+			switch action.Type {
+			case db.ActionDelete:
+				break
+			default:
+				v, err := collection.FindByID(action.ID)
+				if err != nil {
+					log.Errorf("error when listening to thread: %v", err)
+					continue
+				}
+
+				backup := &api.Backup{}
+				util.InstanceFromJSON(v, backup)
+
+				id, err := cid.Decode(backup.LatestBackupCid)
+				if err != nil {
+					log.Errorf("error when listening to thread: %v", err)
+					continue
+				}
+
+				log.Infof("Found new backup. Pinning %v", id)
+				err = ipfs.Pin().Add(ctx, path.IpfsPath(id))
+				log.Infof("Pinned %v", id)
+				if err != nil {
+					log.Errorf("error when listening to thread: %v", err)
+					continue
+				}
+			}
+		}
+	}()
+
+	return nil
 }
 
 func startSchedules(ctx context.Context, schedules *viper.Viper, repoPath string) error {

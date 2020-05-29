@@ -4,75 +4,51 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	pb "github.com/codynhat/ipfs-ios-backup/api/pb"
 	"github.com/codynhat/ipfs-ios-backup/idevice"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/ipfs/go-cid"
 	files "github.com/ipfs/go-ipfs-files"
 	icore "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/options"
-	"github.com/ipfs/interface-go-ipfs-core/path"
+	core "github.com/textileio/go-threads/core/db"
+	"github.com/textileio/go-threads/db"
+	"github.com/textileio/go-threads/util"
 )
+
+type Backup struct {
+	ID              core.InstanceID `json:"_id"` // DeviceID
+	LatestBackupCid string
+	UpdatedAt       time.Time
+}
 
 // Service is a gRPC service
 type Service struct {
-	ipfs icore.CoreAPI
+	ipfs             icore.CoreAPI
+	d                *db.DB
+	backupCollection *db.Collection
 }
 
-func NewService(ipfs icore.CoreAPI) *Service {
+func NewService(ipfs icore.CoreAPI, d *db.DB) (*Service, error) {
+	collection := d.GetCollection("Backup")
 	return &Service{
-		ipfs: ipfs,
-	}
-}
-
-// GetKeyForDevice fetches the IPNS key for a device
-func (s *Service) GetKeyForDevice(ctx context.Context, req *pb.GetKeyForDeviceRequest) (*pb.GetKeyForDeviceReply, error) {
-	deviceID := idevice.DeviceID(req.DeviceID)
-
-	key, err := s.getIpnsKeyForDevice(ctx, deviceID)
-	if err != nil {
-		return nil, err
-	}
-
-	if key == nil {
-		return &pb.GetKeyForDeviceReply{
-			Key: nil,
-		}, nil
-	}
-
-	return &pb.GetKeyForDeviceReply{
-		Key: &pb.Key{
-			Name: key.Name(),
-			Path: key.Path().String(),
-		},
-	}, nil
-}
-
-// CreateKeyForDevice creates a new IPNS key for a device
-func (s *Service) CreateKeyForDevice(ctx context.Context, req *pb.CreateKeyForDeviceRequest) (*pb.CreateKeyForDeviceReply, error) {
-	deviceID := idevice.DeviceID(req.DeviceID)
-
-	key, err := s.createBackupIpnsKey(ctx, deviceID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.CreateKeyForDeviceReply{
-		Key: &pb.Key{
-			Name: key.Name(),
-			Path: key.Path().String(),
-		},
+		ipfs:             ipfs,
+		d:                d,
+		backupCollection: collection,
 	}, nil
 }
 
 // AddBackup adds a new backup to IPFS
 func (s *Service) AddBackup(ctx context.Context, req *pb.AddBackupRequest) (*pb.AddBackupReply, error) {
-	backupIpfsPath, err := s.addBackupToIpfs(ctx, req.BackupDir)
+	backupCid, err := s.addBackupToIpfs(ctx, req.BackupDir)
 	if err != nil {
 		return nil, err
 	}
 
 	return &pb.AddBackupReply{
-		BackupPath: backupIpfsPath.String(),
+		BackupCid: backupCid.String(),
 	}, nil
 }
 
@@ -80,58 +56,66 @@ func (s *Service) AddBackup(ctx context.Context, req *pb.AddBackupRequest) (*pb.
 func (s *Service) UpdateLatestBackup(ctx context.Context, req *pb.UpdateLatestBackupRequest) (*pb.UpdateLatestBackupReply, error) {
 	deviceID := idevice.DeviceID(req.DeviceID)
 
-	key, err := s.getIpnsKeyForDevice(ctx, deviceID)
+	backup := &Backup{
+		ID:              core.InstanceID(deviceID),
+		LatestBackupCid: req.BackupCid,
+		UpdatedAt:       time.Now(),
+	}
+
+	backupExists, err := s.backupExistsForDevice(deviceID)
 	if err != nil {
 		return nil, err
 	}
 
-	if key == nil {
-		return nil, fmt.Errorf("IPNS key does not exist for device. Have backups for this device been enabled?")
+	if backupExists {
+		err := s.backupCollection.Save(util.JSONFromInstance(backup))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_, err := s.backupCollection.Create(util.JSONFromInstance(backup))
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	path := path.New(req.BackupPath)
-
-	backupIpnsEntry, err := s.updateLatestBackupIpns(ctx, path, key)
+	t, err := ptypes.TimestampProto(backup.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
 	return &pb.UpdateLatestBackupReply{
-		Entry: &pb.UpdateLatestBackupReply_Entry{
-			Name:  backupIpnsEntry.Name(),
-			Value: backupIpnsEntry.Value().String(),
+		Backup: &pb.Backup{
+			DeviceID:  backup.ID.String(),
+			BackupCid: backup.LatestBackupCid,
+			UpdatedAt: t,
 		},
 	}, nil
 }
 
 // ListBackups lists all known backups
 func (s *Service) ListBackups(ctx context.Context, req *pb.ListBackupsRequest) (*pb.ListBackupsReply, error) {
-	// Get all IPNS keys
-	keys, err := s.ipfs.Key().List(ctx)
+	// Get all backups
+	backups, err := s.backupCollection.Find(&db.Query{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get IPNS keys: %s", err)
+		return nil, err
 	}
 
-	var results []*pb.ListBackupsReply_Backup
-	for _, key := range keys {
-		if key.Name() != "self" {
-			path, err := s.ipfs.Name().Resolve(ctx, key.Path().String())
-			ipfsPath := "no backup found"
-			if err != nil {
-				ipfsPath = fmt.Sprintf("ERROR: %s", err)
-			}
-			if path != nil && path.String() != "" {
-				ipfsPath = path.String()
-			}
+	var results []*pb.Backup
+	for _, b := range backups {
+		backup := &Backup{}
+		util.InstanceFromJSON(b, backup)
 
-			results = append(results, &pb.ListBackupsReply_Backup{
-				Key: &pb.Key{
-					Name: key.Name(),
-					Path: key.Path().String(),
-				},
-				IpfsPath: ipfsPath,
-			})
+		t, err := ptypes.TimestampProto(backup.UpdatedAt)
+		if err != nil {
+			return nil, err
 		}
+
+		results = append(results, &pb.Backup{
+			DeviceID:  backup.ID.String(),
+			BackupCid: backup.LatestBackupCid,
+			UpdatedAt: t,
+		})
 	}
 
 	return &pb.ListBackupsReply{
@@ -139,65 +123,53 @@ func (s *Service) ListBackups(ctx context.Context, req *pb.ListBackupsRequest) (
 	}, nil
 }
 
-func (s *Service) getIpnsKeyForDevice(ctx context.Context, deviceID idevice.DeviceID) (icore.Key, error) {
-	keys, err := s.ipfs.Key().List(ctx)
+// Export returns the information needed to share backups with another device
+func (s *Service) Export(ctx context.Context, req *pb.ExportRequest) (*pb.ExportReply, error) {
+	addrs, key, err := s.d.GetDBInfo()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get IPNS keys: %s", err)
+		return nil, err
 	}
 
-	deviceIDRaw := string(deviceID)
-	for _, v := range keys {
-		if v.Name() == deviceIDRaw {
-			return v, nil
-		}
+	var rawAddrs []string
+	for _, addr := range addrs {
+		rawAddrs = append(rawAddrs, addr.String())
 	}
 
-	return nil, nil
+	return &pb.ExportReply{
+		Addrs:     rawAddrs,
+		ThreadKey: key.String(),
+	}, nil
 }
 
-func (s *Service) createBackupIpnsKey(ctx context.Context, deviceID idevice.DeviceID) (icore.Key, error) {
-	opts := []options.KeyGenerateOption{
-		options.Key.Size(2048),
-		options.Key.Type(options.RSAKey),
-	}
-
-	key, err := s.ipfs.Key().Generate(ctx, string(deviceID), opts...)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to generate IPNS key: %s", err)
-	}
-
-	return key, nil
-}
-
-func (s *Service) addBackupToIpfs(ctx context.Context, backupDir string) (path.Path, error) {
+func (s *Service) addBackupToIpfs(ctx context.Context, backupDir string) (cid.Cid, error) {
 	backupDirNode, err := getUnixfsNode(backupDir)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to find backup: %s", err)
+		return cid.Undef, fmt.Errorf("Failed to find backup: %s", err)
 	}
 
 	opts := []options.UnixfsAddOption{
+		options.Unixfs.Pin(true),
 		options.Unixfs.Nocopy(true),
 	}
 	cidDirectory, err := s.ipfs.Unixfs().Add(ctx, backupDirNode, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to add backup to IPFS: %s", err)
+		return cid.Undef, fmt.Errorf("Failed to add backup to IPFS: %s", err)
 	}
 
-	return cidDirectory, nil
+	return cidDirectory.Cid(), nil
 }
 
-func (s *Service) updateLatestBackupIpns(ctx context.Context, backupIpfsPath path.Path, key icore.Key) (icore.IpnsEntry, error) {
-	opts := []options.NamePublishOption{
-		options.Name.AllowOffline(true),
-		options.Name.Key(key.Name()),
+func (s *Service) backupExistsForDevice(deviceID idevice.DeviceID) (bool, error) {
+	backups, err := s.backupCollection.FindByID(core.InstanceID(deviceID))
+	if err != nil && err != db.ErrNotFound {
+		return false, err
 	}
 
-	ipnsEntry, err := s.ipfs.Name().Publish(ctx, backupIpfsPath, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to publish to IPNS: %s", err)
+	if err == db.ErrNotFound {
+		return false, nil
 	}
 
-	return ipnsEntry, nil
+	return len(backups) > 0, nil
 }
 
 func getUnixfsNode(path string) (files.Node, error) {
