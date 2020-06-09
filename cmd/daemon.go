@@ -174,7 +174,7 @@ func createIpfsNode(ctx context.Context, repoPath string, bootstrapAddrs []ma.Mu
 	swarmKeyPath := filepath.Join(repoPath, "swarm.key")
 	_, err := os.Stat(swarmKeyPath)
 	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("Swarm key does not exist. Refusing to start IPFS node. Try running `ipfs-ios-desktop init`")
+		return nil, fmt.Errorf("Swarm key does not exist. Refusing to start IPFS node. Try running `ipfs-ios-backup init`")
 	}
 
 	// Setup plugins

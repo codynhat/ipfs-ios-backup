@@ -56,12 +56,12 @@ Use "ipfs-ios-backup [command] --help" for more information about a command.
 
 The repo will need to be initialized before doing anything.
 ``` sh
-ipfs-ios-desktop init
+ipfs-ios-backup init
 ```
 
 By default, the repo will be `$HOME/.ipfs-ios-backup`. You can use the `--repoPath` flag to set a custom path
 ``` sh
-ipfs-ios-desktop init --repoPath=$HOME/.ipfs-ios-backup-custom
+ipfs-ios-backup init --repoPath=$HOME/.ipfs-ios-backup-custom
 ```
 
 or set `repoPath` in the configuration file at `$HOME/.ipfs-ios-backup.json`.
