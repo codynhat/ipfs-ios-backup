@@ -1,5 +1,4 @@
-ipfs-ios-backup
-===============
+# ipfs-ios-backup
 
 Command line utility to backup iOS devices to an embedded and private IPFS node.
 
@@ -7,7 +6,7 @@ Command line utility to backup iOS devices to an embedded and private IPFS node.
 
 ## Homebrew
 
-``` sh
+```sh
 brew tap codynhat/ipfs-ios-backup
 brew install ipfs-ios-backup
 ```
@@ -15,12 +14,13 @@ brew install ipfs-ios-backup
 ## Building from source
 
 ### Requirements
+
 - Go 1.14+
 - libimobiledevice
 
 ### libimobiledevice
 
-[libimobiledevice](http://www.libimobiledevice.org/) is a cross-platform library that enables communication with iOS devices. The main project has been forked to include a few more features needed for `ipfs-ios-backup`. 
+[libimobiledevice](http://www.libimobiledevice.org/) is a cross-platform library that enables communication with iOS devices. The main project has been forked to include a few more features needed for `ipfs-ios-backup`.
 
 See the [README](https://github.com/codynhat/libimobiledevice) for more info.
 
@@ -55,28 +55,30 @@ Use "ipfs-ios-backup [command] --help" for more information about a command.
 ## Initialize repo
 
 The repo will need to be initialized before doing anything.
-``` sh
+
+```sh
 ipfs-ios-backup init
 ```
 
 By default, the repo will be `$HOME/.ipfs-ios-backup`. You can use the `--repoPath` flag to set a custom path
-``` sh
+
+```sh
 ipfs-ios-backup init --repoPath=$HOME/.ipfs-ios-backup-custom
 ```
 
 or set `repoPath` in the configuration file at `$HOME/.ipfs-ios-backup.json`.
 
-``` json
+```json
 {
-    "repoPath": "$HOME/.ipfs-ios-backup-custom"
+  "repoPath": "$HOME/.ipfs-ios-backup-custom"
 }
 ```
 
 ## Schedule Automatic Backups
 
-Backups can be automatically performed in the background by the daemon. This can be enabled in the configuration (default is $HOME/.ipfs-ios-backup.json).
+Backups can be automatically performed in the background by the daemon. This can be enabled in the configuration (default is \$HOME/.ipfs-ios-backup.json).
 
-``` json
+```json
 {
   "schedules": {
     "{DEVICE_NAME}": {
@@ -92,24 +94,29 @@ Where `{DEVICE_NAME}` and `{DEVICE_ID}` are the name and ID of the device you wa
 
 Each schedule has the following parameters:
 
-| Option | Description |
-| ------ | ----------- |
-| periodInHours | How many hours should pass between backups |
+| Option          | Description                                                                          |
+| --------------- | ------------------------------------------------------------------------------------ |
+| periodInHours   | How many hours should pass between backups                                           |
 | minBatteryLevel | The minimum battery level required to perform a backup when a device is not charging |
 
 Notes:
+
 - If a device is connected to a charger, `minBatteryLevel` is ignored
 - It is common for a device to not always be detected on WiFi. Therefore, the `periodInHours` is a best-effort and is not guaranteed
 
 ## Run the daemon
+
 Interacting with and performing scheduled backups requires the daemon to be running
-``` sh
+
+```sh
 ipfs-ios-desktop daemon
 ```
 
 ## brew service (macOS launchd)
+
 If installed via [Homebrew](#homebrew), the daemon can be started automatically at launch.
-``` sh
+
+```sh
 brew services start ipfs-ios-backup
 ```
 
@@ -161,7 +168,7 @@ The output should be saved and sent via some secure mechanism to other machines 
 ipfs-ios-backup init --secrets secrets.json
 ```
 
-*WARNING*: Only send these secrets to trusted nodes. They will join a private IPFS swarm that has access to your backups. While the backups' contents are still encrypted using a password, the metadata is not. Any node that is part of this network will have access to the metadata.
+_WARNING_: Only send these secrets to trusted nodes. They will join a private IPFS swarm that has access to your backups. While the backups' contents are still encrypted using a password, the metadata is not. Any node that is part of this network will have access to the metadata.
 
 # Architecture
 
@@ -172,3 +179,6 @@ ipfs-ios-backup init --secrets secrets.json
 - Encryption of metadata
 - Integration with pinning services
 
+# Support
+
+Please consider supporting this project on [Gitcoin](https://gitcoin.co/grants/912/ipfs-ios-backup). Through future improvements the hope is to make this more accessible and increase adoption of IPFS and Filecoin.
